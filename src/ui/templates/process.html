@@ -234,7 +234,11 @@ Process Data
     // Check if API data exists in session
     async function checkApiData() {
         try {
-            const response = await fetch('/api/check-api-data');
+            const response = await fetch('/api/check-api-data', {
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
             const result = await response.json();
             hasApiData = result.has_data;
             updateApiStatus(result);
@@ -334,7 +338,10 @@ Process Data
         try {
             const response = await fetch('/api/fetch-data', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
                 body: JSON.stringify({
                     date_from: document.getElementById('date_from').value,
                     date_to: document.getElementById('date_to').value,
@@ -404,6 +411,9 @@ Process Data
         try {
             const response = await fetch('/api/process-data', {
                 method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                },
                 body: formData
             });
             
