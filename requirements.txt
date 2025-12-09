@@ -1,15 +1,10 @@
 # Web Framework
 flask>=3.0.0
 flask-wtf>=1.2.0
-flask-login>=0.6.3
-flask-sqlalchemy>=3.1.0
 werkzeug>=3.0.0
 
 # Production Server
 gunicorn>=21.0.0
-
-# Database
-psycopg2-binary>=2.9.0  # PostgreSQL driver for production (Render)
 
 # Data Processing
 pandas>=2.0.0

@@ -4,14 +4,6 @@
  */
 
 // ============================================
-// CSRF Token Handling
-// ============================================
-function getCSRFToken() {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? meta.getAttribute('content') : '';
-}
-
-// ============================================
 // Global State
 // ============================================
 const state = {
@@ -89,11 +81,7 @@ function initSidebar() {
 // ============================================
 async function checkApiStatus() {
     try {
-        const response = await fetch('/api/check-api-data', {
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
+        const response = await fetch('/api/check-api-data');
         const result = await response.json();
         
         state.apiDataLoaded = result.has_data;
@@ -218,12 +206,10 @@ function validateDateFormat(dateStr) {
 // ============================================
 async function fetchJson(url, options = {}) {
     try {
-        const csrfToken = getCSRFToken();
         const response = await fetch(url, {
             ...options,
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
                 ...options.headers
             }
         });
@@ -311,7 +297,6 @@ function getChartColors() {
 // ============================================
 // Export functions for global access
 // ============================================
-window.getCSRFToken = getCSRFToken;
 window.showToast = showToast;
 window.updateApiStatus = updateApiStatus;
 window.checkApiStatus = checkApiStatus;

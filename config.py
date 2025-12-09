@@ -2,23 +2,7 @@
 import os
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Optional
-
-
-@dataclass
-class DatabaseConfig:
-    """Database configuration - supports SQLite (local) and PostgreSQL (production)."""
-    # If DATABASE_URL is set (e.g., from Render PostgreSQL), use it
-    # Otherwise, fall back to SQLite
-    url: str = field(default_factory=lambda: os.environ.get(
-        "DATABASE_URL",
-        f"sqlite:///{Path(__file__).parent / 'instance' / 'buchhaltung.db'}"
-    ))
-    
-    def __post_init__(self):
-        # PostgreSQL URL fix for SQLAlchemy (Render uses postgres:// but SQLAlchemy needs postgresql://)
-        if self.url.startswith("postgres://"):
-            self.url = self.url.replace("postgres://", "postgresql://", 1)
+from typing import List
 
 
 @dataclass
@@ -78,7 +62,6 @@ class Config:
     api: APIConfig = field(default_factory=APIConfig)
     excel: ExcelConfig = field(default_factory=ExcelConfig)
     app: AppConfig = field(default_factory=AppConfig)
-    database: DatabaseConfig = field(default_factory=DatabaseConfig)
 
 
 config = Config()

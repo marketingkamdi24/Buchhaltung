@@ -30,14 +30,9 @@ chmod +x start.sh && ./start.sh
 
 Then open your browser and navigate to: **http://localhost:7860**
 
-**Default Login Credentials:**
-- Username: `buchhaltung`
-- Password: `buchhaltung123`
-
 ## ✨ Features
 
 - **Professional Web UI**: Modern, responsive interface built with Flask and Bootstrap 5
-- **User Authentication**: Secure login system with password hashing
 - **Dark/Light Theme**: Toggle between themes for comfortable viewing
 - **Two-Step Workflow**: Fetch API data → Match & Process shop data
 - **Comprehensive Analytics**: Interactive charts and KPI dashboards
@@ -300,57 +295,6 @@ Make sure to complete Step 1 before Step 2:
 - The sidebar can be collapsed on mobile devices
 - Check processing logs for detailed status of each operation
 
-## 🔐 Authentication
-
-The application requires authentication. A default user is created automatically on first run:
-
-- **Username**: `buchhaltung`
-- **Password**: `buchhaltung123`
-
-All routes are protected and require login. After authentication, you can:
-- Access the dashboard and all features
-- Your session is maintained across browser sessions (if "Remember me" is checked)
-- Logout via the sidebar button
-
-## 🚀 Deployment on Render
-
-### Automatic Deployment (Recommended)
-
-The project includes a `render.yaml` blueprint that configures everything automatically:
-
-1. Push your code to GitHub
-2. Connect your GitHub repository to Render
-3. Create a new **Blueprint** deployment
-4. Render will automatically:
-   - Create a PostgreSQL database
-   - Set up the web service
-   - Configure all environment variables
-
-### Manual Deployment
-
-1. Create a new **Web Service** on Render
-2. Create a new **PostgreSQL** database
-3. Set the following environment variables:
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection URL (auto-set if using Render PostgreSQL) | Yes |
-| `SECRET_KEY` | Flask secret key (generate a secure random string) | Yes |
-| `DEBUG` | Set to "false" for production | Yes |
-| `API_BASE_URL` | External API base URL | Yes |
-| `API_CONNECTION_ID` | API connection identifier | Yes |
-| `API_PROCEDURE_ENDPOINT` | API procedure endpoint | Optional |
-| `API_TIMEOUT` | API request timeout in seconds | Optional |
-
-### Environment Variables for Login
-
-The login system uses the following configuration:
-
-- **`SECRET_KEY`**: Used for session encryption. Render auto-generates this.
-- **`DATABASE_URL`**: The PostgreSQL connection string. The app automatically handles the `postgres://` vs `postgresql://` difference.
-
-**No additional environment variables are needed for the login functionality** - the default user is created automatically when the database is initialized.
-
 ## 📄 License
 
 MIT License - Feel free to use and modify.
@@ -364,4 +308,4 @@ MIT License - Feel free to use and modify.
 
 ---
 
-**Buchhaltung v2.2.0** | Professional Excel Processing Tool with API Integration and User Authentication
+**Buchhaltung v2.1.0** | Professional Excel Processing Tool with API Integration

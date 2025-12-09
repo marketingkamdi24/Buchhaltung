@@ -11,7 +11,6 @@ from pathlib import Path
 from functools import wraps
 
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
-from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import pandas as pd
 import plotly
@@ -28,10 +27,6 @@ from src.processors.data_matcher import DataMatcher
 from src.processors.data_analyzer import DataAnalyzer
 from src.utils.helpers import find_available_port, is_port_in_use, kill_process_on_port
 
-# Import authentication and database modules
-from src.ui.models import db, init_db
-from src.ui.auth import auth_bp, init_auth
-
 
 # Initialize Flask app
 app = Flask(__name__,
@@ -43,22 +38,6 @@ app = Flask(__name__,
 _config = get_config()
 app.secret_key = _config.app.secret_key
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
-
-# Database configuration - uses DATABASE_URL from environment (for Render PostgreSQL) or SQLite locally
-app.config['SQLALCHEMY_DATABASE_URI'] = _config.database.url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Ensure instance directory exists for SQLite
-if 'sqlite' in _config.database.url:
-    instance_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'instance')
-    os.makedirs(instance_dir, exist_ok=True)
-
-# Initialize database and authentication
-init_db(app)
-init_auth(app)
-
-# Register authentication blueprint
-app.register_blueprint(auth_bp)
 
 # Store session data
 api_data_store = {}  # session_id -> DataFrame
@@ -138,14 +117,12 @@ Disallow: /
 
 # Routes
 @app.route('/')
-@login_required
 def index():
     """Main dashboard with analytics."""
     return render_template('index.html', page='dashboard')
 
 
 @app.route('/process')
-@login_required
 def process_page():
     """Process Data page - unified fetch and process."""
     has_api_data = get_api_data() is not None
@@ -153,7 +130,6 @@ def process_page():
 
 
 @app.route('/help')
-@login_required
 def help_page():
     """Help & Documentation page."""
     return render_template('help.html', page='help')
@@ -161,7 +137,6 @@ def help_page():
 
 # API Endpoints
 @app.route('/api/fetch-data', methods=['POST'])
-@login_required
 def api_fetch_data():
     """API endpoint to fetch data from external API."""
     try:
@@ -214,7 +189,6 @@ def api_fetch_data():
 
 
 @app.route('/api/process-data', methods=['POST'])
-@login_required
 def api_process_data():
     """API endpoint to match and process shop data."""
     try:
@@ -291,7 +265,6 @@ def api_process_data():
 
 
 @app.route('/api/analytics-data', methods=['POST'])
-@login_required
 def api_analytics_data():
     """API endpoint to get analytics data."""
     try:
@@ -463,7 +436,6 @@ def api_analytics_data():
 
 
 @app.route('/api/download/<path:filename>')
-@login_required
 def download_file(filename):
     """Download a processed file."""
     try:
@@ -478,7 +450,6 @@ def download_file(filename):
 
 
 @app.route('/api/check-api-data')
-@login_required
 def check_api_data():
     """Check if API data is available in session."""
     api_data = get_api_data()

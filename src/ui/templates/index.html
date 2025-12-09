@@ -251,10 +251,7 @@ Analytics Dashboard
         try {
             const response = await fetch('/api/analytics-data', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     date_from: document.getElementById('date_from').value,
                     date_to: document.getElementById('date_to').value,
