@@ -1,0 +1,24 @@
+# Render Blueprint Configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: buchhaltung
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 src.ui.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.6"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: API_BASE_URL
+        sync: false
+      - key: API_CONNECTION_ID
+        sync: false
+      - key: API_PROCEDURE_ENDPOINT
+        value: "/procedures/IDM_APP_BELEGINFO"
+      - key: API_TIMEOUT
+        value: "30"

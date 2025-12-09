@@ -33,7 +33,10 @@ app = Flask(__name__,
     template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
     static_folder=os.path.join(os.path.dirname(__file__), 'static')
 )
-app.secret_key = os.urandom(24)
+
+# Configure app
+_config = get_config()
+app.secret_key = _config.app.secret_key
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 
 # Store session data

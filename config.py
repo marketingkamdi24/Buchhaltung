@@ -1,4 +1,5 @@
 """Configuration settings for Buchhaltung."""
+import os
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List
@@ -6,10 +7,10 @@ from typing import List
 
 @dataclass
 class APIConfig:
-    base_url: str = "http://81.201.149.54:23100"
-    procedure_endpoint: str = "/procedures/IDM_APP_BELEGINFO"
-    connection_id: str = "c9a182ab-97bf-456e-a0eb-606bf97090d5"
-    timeout: int = 30
+    base_url: str = field(default_factory=lambda: os.environ.get("API_BASE_URL", "http://81.201.149.54:23100"))
+    procedure_endpoint: str = field(default_factory=lambda: os.environ.get("API_PROCEDURE_ENDPOINT", "/procedures/IDM_APP_BELEGINFO"))
+    connection_id: str = field(default_factory=lambda: os.environ.get("API_CONNECTION_ID", "c9a182ab-97bf-456e-a0eb-606bf97090d5"))
+    timeout: int = field(default_factory=lambda: int(os.environ.get("API_TIMEOUT", "30")))
     
     @property
     def full_url(self) -> str:
@@ -43,13 +44,14 @@ class ExcelConfig:
 @dataclass
 class AppConfig:
     base_dir: Path = field(default_factory=lambda: Path(__file__).parent)
-    output_dir: Path = field(default_factory=lambda: Path(__file__).parent / "output")
-    default_port: int = 7860
+    output_dir: Path = field(default_factory=lambda: Path(os.environ.get("OUTPUT_DIR", str(Path(__file__).parent / "output"))))
+    default_port: int = field(default_factory=lambda: int(os.environ.get("PORT", "7860")))
     port_range: tuple = (7860, 7880)
     share: bool = False
-    debug: bool = True
+    debug: bool = field(default_factory=lambda: os.environ.get("DEBUG", "false").lower() == "true")
     theme: str = "soft"
     title: str = "Buchhaltung - Excel Processor"
+    secret_key: str = field(default_factory=lambda: os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production"))
     
     def __post_init__(self):
         self.output_dir.mkdir(parents=True, exist_ok=True)
