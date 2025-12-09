@@ -1,0 +1,18 @@
+# Web Framework
+flask>=3.0.0
+flask-wtf>=1.2.0
+werkzeug>=3.0.0
+
+# Data Processing
+pandas>=2.0.0
+openpyxl>=3.1.0
+numpy>=1.24.0
+
+# API
+requests>=2.31.0
+
+# Date handling
+python-dateutil>=2.8.0
+
+# Charts (for server-side generation if needed)
+plotly>=5.18.0

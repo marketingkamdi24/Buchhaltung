@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-speedometer2"></i>
+Analytics Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Analytics Controls -->
+    <div class="analytics-controls mb-4">
+        <div class="card">
+            <div class="card-body py-3">
+                <form id="analytics-form" class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label small text-muted">From Date</label>
+                        <input type="text" class="form-control" id="date_from" placeholder="DD.MM.YYYY" value="21.10.2025">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small text-muted">To Date</label>
+                        <input type="text" class="form-control" id="date_to" placeholder="DD.MM.YYYY" value="28.10.2025">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small text-muted">Platforms</label>
+                        <div class="btn-group" role="group">
+                            <input type="checkbox" class="btn-check" id="use_amazon" checked>
+                            <label class="btn btn-outline-warning btn-sm" for="use_amazon">Amazon</label>
+                            <input type="checkbox" class="btn-check" id="use_ebay" checked>
+                            <label class="btn btn-outline-danger btn-sm" for="use_ebay">eBay</label>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <input type="text" class="form-control" id="custom_origins" placeholder="Custom origins...">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary" id="load-btn">
+                            <i class="bi bi-graph-up"></i> Load Analytics
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <p class="text-muted">Loading analytics data...</p>
+    </div>
+    
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state-large">
+        <div class="empty-icon">
+            <i class="bi bi-bar-chart-line-fill"></i>
+        </div>
+        <h3>Welcome to Buchhaltung</h3>
+        <p class="text-muted">Load data using the controls above to see your analytics dashboard</p>
+        <div class="quick-actions mt-4">
+            <a href="{{ url_for('process_page') }}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-gear-wide-connected"></i> Process Excel Files
+            </a>
+        </div>
+    </div>
+    
+    <!-- Analytics Content -->
+    <div id="analytics-content" style="display: none;">
+        <!-- KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value" id="kpi-gross-revenue">-</div>
+                    <div class="kpi-label">Gross Revenue</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value text-success" id="kpi-profit">-</div>
+                    <div class="kpi-label">Profit</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value text-info" id="kpi-orders">-</div>
+                    <div class="kpi-label">Orders</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value" id="kpi-customers">-</div>
+                    <div class="kpi-label">Customers</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value" id="kpi-avg-order">-</div>
+                    <div class="kpi-label">Avg Order</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="kpi-card-compact">
+                    <div class="kpi-value text-warning" id="kpi-margin">-</div>
+                    <div class="kpi-label">Margin</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row 1 -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Revenue Trend</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-daily-trend" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-shop"></i> Platform Share</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-platform-revenue" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row 2 -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-globe"></i> Countries</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-geographic" style="height: 280px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-calendar3"></i> Day of Week</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-day-of-week" style="height: 280px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-clock"></i> Hourly Pattern</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-hourly" style="height: 280px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row 3 -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Profitability</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-platform-profitability" style="height: 280px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-people"></i> Customer Segments</h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="chart-customer-frequency" style="height: 280px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Customers Table -->
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0"><i class="bi bi-trophy"></i> Top Customers</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0" id="customer-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th class="text-end">Revenue</th>
+                                        <th class="text-end">Profit</th>
+                                        <th class="text-end">Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customer-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error State -->
+    <div id="error-state" style="display: none;">
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span id="error-message"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const COUNTRY_NAMES = {
+        'DE': 'Germany', 'AT': 'Austria', 'FR': 'France', 'CH': 'Switzerland',
+        'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands', 'BE': 'Belgium',
+        'PL': 'Poland', 'LU': 'Luxembourg', 'Unknown': 'Unknown'
+    };
+    
+    document.getElementById('analytics-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        loadAnalytics();
+    });
+    
+    async function loadAnalytics() {
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('analytics-content').style.display = 'none';
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('loading-state').style.display = 'block';
+        
+        const btn = document.getElementById('load-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Loading...';
+        
+        try {
+            const response = await fetch('/api/analytics-data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    date_from: document.getElementById('date_from').value,
+                    date_to: document.getElementById('date_to').value,
+                    use_amazon: document.getElementById('use_amazon').checked,
+                    use_ebay: document.getElementById('use_ebay').checked,
+                    custom_origins: document.getElementById('custom_origins').value
+                })
+            });
+            
+            const result = await response.json();
+            document.getElementById('loading-state').style.display = 'none';
+            
+            if (result.success) {
+                updateKPIs(result.kpis);
+                renderCharts(result.charts);
+                updateTables(result.tables);
+                document.getElementById('analytics-content').style.display = 'block';
+                showToast('success', `Loaded ${result.record_count.toLocaleString()} records`);
+            } else {
+                document.getElementById('error-message').textContent = result.message;
+                document.getElementById('error-state').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-message').textContent = 'Network error: ' + error.message;
+            document.getElementById('error-state').style.display = 'block';
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-graph-up"></i> Load Analytics';
+    }
+    
+    function updateKPIs(kpis) {
+        document.getElementById('kpi-gross-revenue').textContent = formatEuro(kpis.total_gross_revenue || 0);
+        document.getElementById('kpi-profit').textContent = formatEuro(kpis.total_profit || 0);
+        document.getElementById('kpi-orders').textContent = (kpis.total_orders || 0).toLocaleString();
+        document.getElementById('kpi-customers').textContent = (kpis.unique_customers || 0).toLocaleString();
+        document.getElementById('kpi-avg-order').textContent = formatEuro(kpis.avg_order_value_gross || 0);
+        document.getElementById('kpi-margin').textContent = (kpis.profit_margin_pct || 0).toFixed(1) + '%';
+    }
+    
+    function formatEuro(num) {
+        if (num >= 1000000) return '€' + (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return '€' + (num / 1000).toFixed(1) + 'K';
+        return '€' + num.toFixed(0);
+    }
+    
+    function formatNumber(num) {
+        return num.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    function renderCharts(charts) {
+        const config = {responsive: true, displayModeBar: false};
+        
+        if (charts.daily_trend) Plotly.newPlot('chart-daily-trend', charts.daily_trend.data, charts.daily_trend.layout, config);
+        if (charts.platform_revenue) Plotly.newPlot('chart-platform-revenue', charts.platform_revenue.data, charts.platform_revenue.layout, config);
+        if (charts.geographic) Plotly.newPlot('chart-geographic', charts.geographic.data, charts.geographic.layout, config);
+        if (charts.day_of_week) Plotly.newPlot('chart-day-of-week', charts.day_of_week.data, charts.day_of_week.layout, config);
+        if (charts.hourly) Plotly.newPlot('chart-hourly', charts.hourly.data, charts.hourly.layout, config);
+        if (charts.platform_profitability) Plotly.newPlot('chart-platform-profitability', charts.platform_profitability.data, charts.platform_profitability.layout, config);
+        if (charts.customer_frequency) Plotly.newPlot('chart-customer-frequency', charts.customer_frequency.data, charts.customer_frequency.layout, config);
+    }
+    
+    function updateTables(tables) {
+        if (tables.top_customers) {
+            const tbody = document.getElementById('customer-tbody');
+            tbody.innerHTML = tables.top_customers.slice(0, 10).map(row => 
+                `<tr>
+                    <td>${row.Customer_Name || row.Customer_ID || 'N/A'}</td>
+                    <td class="text-end">€${formatNumber(row.Total_Revenue || 0)}</td>
+                    <td class="text-end">€${formatNumber(row.Total_Profit || 0)}</td>
+                    <td class="text-end">${row.Order_Count || 0}</td>
+                </tr>`
+            ).join('');
+        }
+    }
+</script>
+{% endblock %}

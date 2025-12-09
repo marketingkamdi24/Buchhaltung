@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block title %}Data Analytics{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-bar-chart-line"></i>
+Data Analytics Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Data Loader Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Load Data for Analysis</h5>
+        </div>
+        <div class="card-body">
+            <form id="analytics-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-6 col-lg-2">
+                        <label for="date_from" class="form-label">From Date</label>
+                        <input type="text" class="form-control" id="date_from" placeholder="DD.MM.YYYY" value="21.10.2025">
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-2">
+                        <label for="date_to" class="form-label">To Date</label>
+                        <input type="text" class="form-control" id="date_to" placeholder="DD.MM.YYYY" value="28.10.2025">
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-2">
+                        <label class="form-label">Platforms</label>
+                        <div class="platform-checkboxes-inline">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="use_amazon" checked>
+                                <label class="form-check-label" for="use_amazon">Amazon</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="use_ebay" checked>
+                                <label class="form-check-label" for="use_ebay">eBay</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="custom_origins" class="form-label">Custom Origins</label>
+                        <input type="text" class="form-control" id="custom_origins" placeholder="Kaufland, etc.">
+                    </div>
+                    <div class="col-12 col-lg-3">
+                        <button type="submit" class="btn btn-primary w-100" id="load-btn">
+                            <i class="bi bi-graph-up"></i> Load & Analyze
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-state" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted">Analyzing your data...</p>
+    </div>
+    
+    <!-- Empty State -->
+    <div id="empty-state" class="text-center py-5">
+        <i class="bi bi-bar-chart text-muted" style="font-size: 5rem;"></i>
+        <h4 class="mt-3 text-muted">No Data Loaded</h4>
+        <p class="text-muted">Configure the date range and platforms above, then click "Load & Analyze" to see your analytics dashboard.</p>
+    </div>
+    
+    <!-- Analytics Content -->
+    <div id="analytics-content" style="display: none;">
+        <!-- KPI Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-primary-subtle">
+                        <i class="bi bi-currency-euro text-primary"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" id="kpi-gross-revenue">€0.00</div>
+                        <div class="kpi-label">Total Gross Revenue</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-success-subtle">
+                        <i class="bi bi-graph-up-arrow text-success"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" id="kpi-profit">€0.00</div>
+                        <div class="kpi-label">Total Profit (ERLOES)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-info-subtle">
+                        <i class="bi bi-box-seam text-info"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" id="kpi-orders">0</div>
+                        <div class="kpi-label">Total Orders</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-warning-subtle">
+                        <i class="bi bi-people text-warning"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value" id="kpi-customers">0</div>
+                        <div class="kpi-label">Unique Customers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Secondary KPIs -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="stat-card-small">
+                    <i class="bi bi-cart text-primary"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="kpi-avg-order">€0.00</div>
+                        <div class="stat-label">Avg Order Value</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="stat-card-small">
+                    <i class="bi bi-percent text-success"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="kpi-margin">0%</div>
+                        <div class="stat-label">Profit Margin</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="stat-card-small">
+                    <i class="bi bi-globe text-info"></i>
+                    <div class="stat-info">
+                        <div class="stat-value" id="kpi-countries">0</div>
+                        <div class="stat-label">Countries</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Platform Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-shop"></i> Platform Analysis</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-platform-revenue" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-platform-orders" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Geographic Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-globe-europe-africa"></i> Geographic Analysis</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-8">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-geographic" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Country Details</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 300px;">
+                            <table class="table table-sm table-striped mb-0" id="country-table">
+                                <thead>
+                                    <tr>
+                                        <th>Country</th>
+                                        <th>Revenue</th>
+                                        <th>Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="country-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-calendar3"></i> Time Analysis</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-daily-trend" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-day-of-week" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-hourly" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-people"></i> Customer Analysis</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Top 20 Customers by Revenue</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 350px;">
+                            <table class="table table-sm table-striped mb-0" id="customer-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Revenue</th>
+                                        <th>Profit</th>
+                                        <th>Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customer-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-customer-frequency" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profitability Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-cash-stack"></i> Profitability Analysis</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-profit-margin" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-platform-profitability" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Value & Payment Analysis -->
+        <div class="section-header">
+            <h2><i class="bi bi-credit-card"></i> Order Value & Payments</h2>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-order-value" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <div id="chart-payment" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error State -->
+    <div id="error-state" style="display: none;">
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span id="error-message"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('analytics-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Show loading
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('analytics-content').style.display = 'none';
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('loading-state').style.display = 'block';
+        
+        const btn = document.getElementById('load-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+        
+        try {
+            const response = await fetch('/api/analytics-data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    date_from: document.getElementById('date_from').value,
+                    date_to: document.getElementById('date_to').value,
+                    use_amazon: document.getElementById('use_amazon').checked,
+                    use_ebay: document.getElementById('use_ebay').checked,
+                    custom_origins: document.getElementById('custom_origins').value
+                })
+            });
+            
+            const result = await response.json();
+            document.getElementById('loading-state').style.display = 'none';
+            
+            if (result.success) {
+                updateKPIs(result.kpis);
+                renderCharts(result.charts);
+                updateTables(result.tables);
+                document.getElementById('analytics-content').style.display = 'block';
+                showToast('success', `Analyzed ${result.record_count.toLocaleString()} records`);
+            } else {
+                document.getElementById('error-message').textContent = result.message;
+                document.getElementById('error-state').style.display = 'block';
+                showToast('error', 'Failed to load analytics');
+            }
+        } catch (error) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-message').textContent = 'Network error: ' + error.message;
+            document.getElementById('error-state').style.display = 'block';
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-graph-up"></i> Load & Analyze';
+    });
+    
+    function updateKPIs(kpis) {
+        document.getElementById('kpi-gross-revenue').textContent = '€' + formatNumber(kpis.total_gross_revenue || 0);
+        document.getElementById('kpi-profit').textContent = '€' + formatNumber(kpis.total_profit || 0);
+        document.getElementById('kpi-orders').textContent = (kpis.total_orders || 0).toLocaleString();
+        document.getElementById('kpi-customers').textContent = (kpis.unique_customers || 0).toLocaleString();
+        document.getElementById('kpi-avg-order').textContent = '€' + formatNumber(kpis.avg_order_value_gross || 0);
+        document.getElementById('kpi-margin').textContent = (kpis.profit_margin_pct || 0).toFixed(1) + '%';
+        document.getElementById('kpi-countries').textContent = (kpis.countries || 0).toString();
+    }
+    
+    function formatNumber(num) {
+        return num.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    function renderCharts(charts) {
+        const chartConfig = {
+            responsive: true,
+            displayModeBar: false
+        };
+        
+        // Platform Revenue
+        if (charts.platform_revenue) {
+            Plotly.newPlot('chart-platform-revenue', charts.platform_revenue.data, charts.platform_revenue.layout, chartConfig);
+        }
+        
+        // Platform Orders
+        if (charts.platform_orders) {
+            Plotly.newPlot('chart-platform-orders', charts.platform_orders.data, charts.platform_orders.layout, chartConfig);
+        }
+        
+        // Geographic
+        if (charts.geographic) {
+            Plotly.newPlot('chart-geographic', charts.geographic.data, charts.geographic.layout, chartConfig);
+        }
+        
+        // Daily Trend
+        if (charts.daily_trend) {
+            Plotly.newPlot('chart-daily-trend', charts.daily_trend.data, charts.daily_trend.layout, chartConfig);
+        }
+        
+        // Day of Week
+        if (charts.day_of_week) {
+            Plotly.newPlot('chart-day-of-week', charts.day_of_week.data, charts.day_of_week.layout, chartConfig);
+        }
+        
+        // Hourly
+        if (charts.hourly) {
+            Plotly.newPlot('chart-hourly', charts.hourly.data, charts.hourly.layout, chartConfig);
+        }
+        
+        // Customer Frequency
+        if (charts.customer_frequency) {
+            Plotly.newPlot('chart-customer-frequency', charts.customer_frequency.data, charts.customer_frequency.layout, chartConfig);
+        }
+        
+        // Profit Margin
+        if (charts.profit_margin) {
+            Plotly.newPlot('chart-profit-margin', charts.profit_margin.data, charts.profit_margin.layout, chartConfig);
+        }
+        
+        // Platform Profitability
+        if (charts.platform_profitability) {
+            Plotly.newPlot('chart-platform-profitability', charts.platform_profitability.data, charts.platform_profitability.layout, chartConfig);
+        }
+        
+        // Order Value
+        if (charts.order_value) {
+            Plotly.newPlot('chart-order-value', charts.order_value.data, charts.order_value.layout, chartConfig);
+        }
+        
+        // Payment
+        if (charts.payment) {
+            Plotly.newPlot('chart-payment', charts.payment.data, charts.payment.layout, chartConfig);
+        }
+    }
+    
+    function updateTables(tables) {
+        // Countries table
+        if (tables.countries) {
+            const tbody = document.getElementById('country-tbody');
+            tbody.innerHTML = tables.countries.map(row => 
+                `<tr>
+                    <td>${row.Country}</td>
+                    <td>€${formatNumber(row.BRUTTO_sum || 0)}</td>
+                    <td>${row.BRUTTO_count || 0}</td>
+                </tr>`
+            ).join('');
+        }
+        
+        // Customers table
+        if (tables.top_customers) {
+            const tbody = document.getElementById('customer-tbody');
+            tbody.innerHTML = tables.top_customers.map(row => 
+                `<tr>
+                    <td>${row.Customer_Name || row.Customer_ID || 'N/A'}</td>
+                    <td>€${formatNumber(row.Total_Revenue || 0)}</td>
+                    <td>€${formatNumber(row.Total_Profit || 0)}</td>
+                    <td>${row.Order_Count || 0}</td>
+                </tr>`
+            ).join('');
+        }
+    }
+</script>
+{% endblock %}

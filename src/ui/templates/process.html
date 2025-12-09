@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block title %}Process Data{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-gear-wide-connected"></i>
+Process Data
+{% endblock %}
+
+{% block content %}
+<div class="process-page">
+    <div class="row g-4">
+        <!-- Left Column: API Data Fetch -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <div class="step-badge me-3">1</div>
+                        <div>
+                            <h5 class="mb-0">Fetch API Data</h5>
+                            <small class="text-muted">Download transaction data from platforms</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="fetch-form">
+                        <div class="row g-3">
+                            <!-- Date Range -->
+                            <div class="col-6">
+                                <label class="form-label">
+                                    <i class="bi bi-calendar3 me-1"></i>From Date
+                                </label>
+                                <input type="text" class="form-control" id="date_from" 
+                                       placeholder="DD.MM.YYYY" value="21.10.2025" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">
+                                    <i class="bi bi-calendar3 me-1"></i>To Date
+                                </label>
+                                <input type="text" class="form-control" id="date_to" 
+                                       placeholder="DD.MM.YYYY" value="28.10.2025" required>
+                            </div>
+                            
+                            <!-- Platforms -->
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <i class="bi bi-shop me-1"></i>Platforms
+                                </label>
+                                <div class="platform-buttons">
+                                    <div class="form-check form-check-inline platform-check">
+                                        <input class="form-check-input" type="checkbox" id="use_amazon" checked>
+                                        <label class="form-check-label platform-amazon" for="use_amazon">
+                                            <i class="bi bi-box-fill"></i> Amazon
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline platform-check">
+                                        <input class="form-check-input" type="checkbox" id="use_ebay" checked>
+                                        <label class="form-check-label platform-ebay" for="use_ebay">
+                                            <i class="bi bi-tag-fill"></i> eBay
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Origins -->
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Custom Origins
+                                    <small class="text-muted">(optional, comma-separated)</small>
+                                </label>
+                                <input type="text" class="form-control" id="custom_origins" 
+                                       placeholder="e.g., Etsy, Shopify">
+                            </div>
+                            
+                            <!-- Fetch Button -->
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg w-100" id="fetch-btn">
+                                    <i class="bi bi-cloud-download"></i> Fetch API Data
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Fetch Status -->
+                    <div id="fetch-status" class="mt-4" style="display: none;">
+                        <div class="status-card">
+                            <div class="status-icon">
+                                <i class="bi bi-check-circle-fill text-success" id="fetch-success-icon" style="display: none;"></i>
+                                <i class="bi bi-x-circle-fill text-danger" id="fetch-error-icon" style="display: none;"></i>
+                                <div class="spinner-border text-primary" id="fetch-loading" style="display: none;"></div>
+                            </div>
+                            <div class="status-text" id="fetch-message"></div>
+                        </div>
+                        
+                        <div id="fetch-result" style="display: none;">
+                            <div class="result-stats">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="fetch-records">0</span>
+                                    <span class="stat-label">Records</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="fetch-file">-</span>
+                                    <span class="stat-label">Output File</span>
+                                </div>
+                            </div>
+                            <a href="#" id="download-api-link" class="btn btn-outline-primary btn-sm mt-2" style="display: none;">
+                                <i class="bi bi-download"></i> Download API Data
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column: Process Shop Data -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <div class="step-badge me-3">2</div>
+                        <div>
+                            <h5 class="mb-0">Process Shop Data</h5>
+                            <small class="text-muted">Match with API data and process transactions</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- API Data Status -->
+                    <div id="api-status" class="api-status-card mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="status-indicator" id="api-indicator"></div>
+                            <div class="ms-3 flex-grow-1">
+                                <div class="fw-semibold" id="api-status-title">API Data</div>
+                                <small class="text-muted" id="api-status-text">Checking...</small>
+                            </div>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="upload-zone" id="upload-zone">
+                        <input type="file" id="shop-file" accept=".xlsx,.xls,.csv" hidden>
+                        <div class="upload-content">
+                            <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                            <h6>Upload Shop Data File</h6>
+                            <p class="text-muted mb-2">Drag & drop or click to browse</p>
+                            <small class="text-muted">Supports .xlsx, .xls, .csv</small>
+                        </div>
+                        <div class="upload-file-info" id="file-info" style="display: none;">
+                            <i class="bi bi-file-earmark-excel text-success"></i>
+                            <span id="file-name"></span>
+                            <button type="button" class="btn btn-link btn-sm text-danger" id="clear-file">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Process Button -->
+                    <button type="button" class="btn btn-success btn-lg w-100 mt-4" id="process-btn" disabled>
+                        <i class="bi bi-play-circle"></i> Process Data
+                    </button>
+                    
+                    <!-- Process Status -->
+                    <div id="process-status" class="mt-4" style="display: none;">
+                        <div class="status-card">
+                            <div class="status-icon">
+                                <i class="bi bi-check-circle-fill text-success" id="process-success-icon" style="display: none;"></i>
+                                <i class="bi bi-x-circle-fill text-danger" id="process-error-icon" style="display: none;"></i>
+                                <div class="spinner-border text-success" id="process-loading" style="display: none;"></div>
+                            </div>
+                            <div class="status-text" id="process-message"></div>
+                        </div>
+                        
+                        <div id="process-result" style="display: none;">
+                            <div class="result-stats">
+                                <div class="stat-item">
+                                    <span class="stat-value text-success" id="matched-count">0</span>
+                                    <span class="stat-label">Matched</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value text-warning" id="unmatched-count">0</span>
+                                    <span class="stat-label">Unmatched</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value text-info" id="process-total">0</span>
+                                    <span class="stat-label">Total</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <a href="#" id="download-matched-link" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-download"></i> Download Matched
+                                </a>
+                                <a href="#" id="download-modified-link" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-download"></i> Download Modified
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview Section -->
+    <div id="preview-section" class="mt-4" style="display: none;">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-table"></i> Data Preview</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" id="preview-table">
+                        <thead id="preview-head"></thead>
+                        <tbody id="preview-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedFile = null;
+    let hasApiData = false;
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        checkApiData();
+        setupUploadZone();
+    });
+    
+    // Check if API data exists in session
+    async function checkApiData() {
+        try {
+            const response = await fetch('/api/check-api-data');
+            const result = await response.json();
+            hasApiData = result.has_data;
+            updateApiStatus(result);
+        } catch (error) {
+            updateApiStatus({has_data: false});
+        }
+        updateProcessButton();
+    }
+    
+    function updateApiStatus(result) {
+        const indicator = document.getElementById('api-indicator');
+        const title = document.getElementById('api-status-title');
+        const text = document.getElementById('api-status-text');
+        
+        if (result.has_data) {
+            indicator.className = 'status-indicator active';
+            title.textContent = 'API Data Ready';
+            text.textContent = `${result.record_count} records from ${result.date_from} to ${result.date_to}`;
+        } else {
+            indicator.className = 'status-indicator';
+            title.textContent = 'No API Data';
+            text.textContent = 'Fetch data using Step 1 first';
+        }
+    }
+    
+    // Setup file upload zone
+    function setupUploadZone() {
+        const zone = document.getElementById('upload-zone');
+        const input = document.getElementById('shop-file');
+        
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        
+        input.addEventListener('change', () => {
+            if (input.files.length) handleFile(input.files[0]);
+        });
+        
+        document.getElementById('clear-file').addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearFile();
+        });
+    }
+    
+    function handleFile(file) {
+        if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+            showToast('error', 'Please upload an Excel or CSV file');
+            return;
+        }
+        
+        selectedFile = file;
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-info').style.display = 'flex';
+        document.querySelector('.upload-content').style.display = 'none';
+        updateProcessButton();
+    }
+    
+    function clearFile() {
+        selectedFile = null;
+        document.getElementById('shop-file').value = '';
+        document.getElementById('file-info').style.display = 'none';
+        document.querySelector('.upload-content').style.display = 'flex';
+        updateProcessButton();
+    }
+    
+    function updateProcessButton() {
+        const btn = document.getElementById('process-btn');
+        btn.disabled = !hasApiData || !selectedFile;
+    }
+    
+    // Fetch API Data
+    document.getElementById('fetch-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('fetch-btn');
+        const status = document.getElementById('fetch-status');
+        const result = document.getElementById('fetch-result');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Fetching...';
+        
+        status.style.display = 'block';
+        result.style.display = 'none';
+        document.getElementById('fetch-success-icon').style.display = 'none';
+        document.getElementById('fetch-error-icon').style.display = 'none';
+        document.getElementById('fetch-loading').style.display = 'block';
+        document.getElementById('fetch-message').textContent = 'Connecting to API...';
+        
+        try {
+            const response = await fetch('/api/fetch-data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    date_from: document.getElementById('date_from').value,
+                    date_to: document.getElementById('date_to').value,
+                    use_amazon: document.getElementById('use_amazon').checked,
+                    use_ebay: document.getElementById('use_ebay').checked,
+                    custom_origins: document.getElementById('custom_origins').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            document.getElementById('fetch-loading').style.display = 'none';
+            
+            if (data.success) {
+                document.getElementById('fetch-success-icon').style.display = 'block';
+                document.getElementById('fetch-message').textContent = data.message;
+                document.getElementById('fetch-records').textContent = data.record_count.toLocaleString();
+                document.getElementById('fetch-file').textContent = data.output_file.split('/').pop();
+                
+                if (data.download_url) {
+                    const link = document.getElementById('download-api-link');
+                    link.href = data.download_url;
+                    link.style.display = 'inline-block';
+                }
+                
+                result.style.display = 'block';
+                hasApiData = true;
+                checkApiData();
+                showToast('success', `Fetched ${data.record_count} records`);
+            } else {
+                document.getElementById('fetch-error-icon').style.display = 'block';
+                document.getElementById('fetch-message').textContent = data.message;
+                showToast('error', data.message);
+            }
+        } catch (error) {
+            document.getElementById('fetch-loading').style.display = 'none';
+            document.getElementById('fetch-error-icon').style.display = 'block';
+            document.getElementById('fetch-message').textContent = 'Network error: ' + error.message;
+            showToast('error', 'Failed to fetch data');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Fetch API Data';
+    });
+    
+    // Process Data
+    document.getElementById('process-btn').addEventListener('click', async function() {
+        if (!selectedFile || !hasApiData) return;
+        
+        const btn = this;
+        const status = document.getElementById('process-status');
+        const result = document.getElementById('process-result');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+        
+        status.style.display = 'block';
+        result.style.display = 'none';
+        document.getElementById('process-success-icon').style.display = 'none';
+        document.getElementById('process-error-icon').style.display = 'none';
+        document.getElementById('process-loading').style.display = 'block';
+        document.getElementById('process-message').textContent = 'Processing data...';
+        
+        const formData = new FormData();
+        formData.append('shop_file', selectedFile);
+        
+        try {
+            const response = await fetch('/api/process-data', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            document.getElementById('process-loading').style.display = 'none';
+            
+            if (data.success) {
+                document.getElementById('process-success-icon').style.display = 'block';
+                document.getElementById('process-message').textContent = data.message;
+                document.getElementById('matched-count').textContent = data.matched_count.toLocaleString();
+                document.getElementById('unmatched-count').textContent = data.unmatched_count.toLocaleString();
+                document.getElementById('process-total').textContent = data.total_count.toLocaleString();
+                
+                if (data.matched_url) {
+                    document.getElementById('download-matched-link').href = data.matched_url;
+                    document.getElementById('download-matched-link').style.display = 'inline-block';
+                }
+                if (data.modified_url) {
+                    document.getElementById('download-modified-link').href = data.modified_url;
+                    document.getElementById('download-modified-link').style.display = 'inline-block';
+                }
+                
+                result.style.display = 'block';
+                showToast('success', `Processed ${data.total_count} records, ${data.matched_count} matched`);
+            } else {
+                document.getElementById('process-error-icon').style.display = 'block';
+                document.getElementById('process-message').textContent = data.message;
+                showToast('error', data.message);
+            }
+        } catch (error) {
+            document.getElementById('process-loading').style.display = 'none';
+            document.getElementById('process-error-icon').style.display = 'block';
+            document.getElementById('process-message').textContent = 'Network error: ' + error.message;
+            showToast('error', 'Failed to process data');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-circle"></i> Process Data';
+        updateProcessButton();
+    });
+</script>
+{% endblock %}

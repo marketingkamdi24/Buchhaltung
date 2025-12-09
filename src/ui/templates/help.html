@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Help & Documentation{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-question-circle"></i>
+Help & Documentation
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Quick Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <a href="#workflow" class="help-nav-card">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>Workflow Guide</span>
+                            </a>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <a href="#processing" class="help-nav-card">
+                                <i class="bi bi-gear-wide-connected"></i>
+                                <span>Processing Rules</span>
+                            </a>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <a href="#output" class="help-nav-card">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                                <span>Output Format</span>
+                            </a>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <a href="#troubleshooting" class="help-nav-card">
+                                <i class="bi bi-tools"></i>
+                                <span>Troubleshooting</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Workflow Guide -->
+    <section id="workflow" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-diagram-3"></i> Workflow Guide</h2>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <p class="lead mb-4">The application provides a streamlined workflow on a single page with two simple steps:</p>
+                
+                <div class="row g-4">
+                    <div class="col-12 col-lg-6">
+                        <div class="help-step-card step-1">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4><i class="bi bi-cloud-download"></i> Fetch API Data</h4>
+                                <p>Connect to the database and retrieve transaction data.</p>
+                                <div class="step-instructions">
+                                    <h6>Instructions:</h6>
+                                    <ol>
+                                        <li>Go to the <strong>Process Data</strong> page</li>
+                                        <li>Enter date range in <strong>DD.MM.YYYY</strong> format</li>
+                                        <li>Select platforms (Amazon, eBay) or add custom origins</li>
+                                        <li>Click <strong>"Fetch API Data"</strong></li>
+                                        <li>Wait for the status to show "API Data Ready"</li>
+                                    </ol>
+                                </div>
+                                <div class="step-note">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>The API data contains ORDER_ID for matching, and KUNDENNR/BELEGNR for mapping KD-NR and RG-NR columns.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 col-lg-6">
+                        <div class="help-step-card step-2">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4><i class="bi bi-file-earmark-spreadsheet"></i> Process Shop Data</h4>
+                                <p>Upload your eBay shop export and process it automatically.</p>
+                                <div class="step-instructions">
+                                    <h6>Instructions:</h6>
+                                    <ol>
+                                        <li>Complete Step 1 first (fetch API data)</li>
+                                        <li>Upload your eBay shop export Excel file</li>
+                                        <li>File must have <strong>Bestellnummer</strong> column in row 11</li>
+                                        <li>Click <strong>"Process Data"</strong></li>
+                                        <li>Download the processed files</li>
+                                    </ol>
+                                </div>
+                                <div class="step-note">
+                                    <i class="bi bi-lightbulb"></i>
+                                    <span>The system matches rows by Bestellnummer ↔ ORDER_ID and automatically fills KD-NR and RG-NR from API data.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Processing Rules -->
+    <section id="processing" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-gear-wide-connected"></i> Processing Rules Applied</h2>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th>Rule Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-primary">1</span></td>
+                                <td><strong>Header extraction:</strong> Finds metadata (Verkäufer, Betrag, Transaktionen count) from original file</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">2</span></td>
+                                <td><strong>Data matching:</strong> Matches Bestellnummer with ORDER_ID from API data</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">3</span></td>
+                                <td><strong>Row restructuring:</strong> Data starts from row 5 with proper headers in row 4</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">4</span></td>
+                                <td><strong>Column organization:</strong> Maps columns to standard output format (A-R)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">5</span></td>
+                                <td><strong>KD-NR / RG-NR Mapping:</strong> Fills columns G and H using Bestellnummer ↔ ORDER_ID matching</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">6</span></td>
+                                <td><strong>Verification columns:</strong> Adds T (Zwischensumme copy) and U (=J-T formula)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">7</span></td>
+                                <td><strong>Andere Gebühr handling:</strong> Separates to Sheet 2 (Tabelle1), creates summary row</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">8</span></td>
+                                <td><strong>Fee aggregation:</strong> Adds "Gebuehr" row with SUM formulas for fee columns</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">9</span></td>
+                                <td><strong>Value conversion:</strong> Replaces "--" with 0</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">10</span></td>
+                                <td><strong>Verpackung und Versand:</strong> Adds to Zwischensumme if present</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Output Format -->
+    <section id="output" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-file-earmark-spreadsheet"></i> Output Format</h2>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-file-text"></i> Main Sheet Structure</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="output-list">
+                            <li><strong>Row 1:</strong> Verkäufer | [seller name]</li>
+                            <li><strong>Row 2:</strong> Transaktionen | [count]</li>
+                            <li><strong>Row 3:</strong> Betrag | [total amount]</li>
+                            <li><strong>Row 4:</strong> Column Headers</li>
+                            <li><strong>Row 5+:</strong> Transaction Data</li>
+                            <li><strong>Gebuehr Row:</strong> Sum of all fees (K-O columns)</li>
+                            <li><strong>Andere Gebuehr Row:</strong> Sum of "Andere Gebühr" transactions</li>
+                            <li><strong>Totals Row:</strong> SUM formulas for J and P columns</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-table"></i> Column Definitions (A-U)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <ul class="output-list small">
+                                    <li><strong>A:</strong> Datum der Transaktionserstellung</li>
+                                    <li><strong>B:</strong> Typ</li>
+                                    <li><strong>C:</strong> Bestellnummer</li>
+                                    <li><strong>D:</strong> Alte Bestellnummer</li>
+                                    <li><strong>E:</strong> Nutzername des Käufers</li>
+                                    <li><strong>F:</strong> Name des Käufers</li>
+                                    <li><strong>G:</strong> KD-NR (from KUNDENNR)</li>
+                                    <li><strong>H:</strong> RG-NR (from BELEGNR)</li>
+                                    <li><strong>I:</strong> Transaktionsbetrag</li>
+                                    <li><strong>J:</strong> Zwischensumme Artikel</li>
+                                </ul>
+                            </div>
+                            <div class="col-6">
+                                <ul class="output-list small">
+                                    <li><strong>K:</strong> Fixer Anteil</li>
+                                    <li><strong>L:</strong> Variabler Anteil</li>
+                                    <li><strong>M:</strong> Gebühr hohe Quote</li>
+                                    <li><strong>N:</strong> Gebühr Servicestatus</li>
+                                    <li><strong>O:</strong> Internationale Gebühr</li>
+                                    <li><strong>P:</strong> Betrag abzügl. Kosten</li>
+                                    <li><strong>Q:</strong> Auszahlung Nr.</li>
+                                    <li><strong>R:</strong> Auszahlungsdatum</li>
+                                    <li><strong>T:</strong> Verification (copy of J)</li>
+                                    <li><strong>U:</strong> =J-T (verification)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Second Sheet (Tabelle1)</h5>
+            </div>
+            <div class="card-body">
+                <p>All "Andere Gebühr" entries are moved to a separate sheet with:</p>
+                <ul class="output-list">
+                    <li>Individual transaction details</li>
+                    <li>Same column structure as main sheet</li>
+                    <li>SUM formulas for columns J and P at the bottom</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Analytics Features -->
+    <section id="analytics" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-bar-chart-line"></i> Analytics Features</h2>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-speedometer2"></i>
+                    <h5>KPI Dashboard</h5>
+                    <p>Key metrics including revenue, orders, customers, profit margins</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-shop"></i>
+                    <h5>Platform Analysis</h5>
+                    <p>Compare performance across Amazon, eBay, and other platforms</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-globe"></i>
+                    <h5>Geographic Analysis</h5>
+                    <p>Sales distribution by country with detailed breakdowns</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-calendar3"></i>
+                    <h5>Time Analysis</h5>
+                    <p>Daily/weekly trends, day-of-week patterns, hourly distribution</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-people"></i>
+                    <h5>Customer Analysis</h5>
+                    <p>Top customers, repeat customer rates, customer segmentation</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="feature-help-card">
+                    <i class="bi bi-cash-stack"></i>
+                    <h5>Profitability</h5>
+                    <p>Profit margins by platform and overall margin distribution</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Troubleshooting -->
+    <section id="troubleshooting" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-tools"></i> Troubleshooting</h2>
+        </div>
+        
+        <div class="accordion" id="troubleshootingAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        "No API Data" error when trying to process
+                    </button>
+                </h2>
+                <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#troubleshootingAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Problem:</strong> You need to fetch API data before processing shop data.</p>
+                        <p><strong>Solution:</strong></p>
+                        <ol>
+                            <li>On the <strong>Process Data</strong> page, use the left panel first</li>
+                            <li>Enter your date range and select platforms</li>
+                            <li>Click "Fetch API Data"</li>
+                            <li>Wait for the status to show "API Data Ready"</li>
+                            <li>Then upload your shop file and click "Process Data"</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        "Bestellnummer column not found" error
+                    </button>
+                </h2>
+                <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Problem:</strong> Your shop file doesn't have the expected column structure.</p>
+                        <p><strong>Solution:</strong></p>
+                        <ol>
+                            <li>Check that you're uploading an eBay shop export file</li>
+                            <li>The file should have "Bestellnummer" column in row 11</li>
+                            <li>Make sure the file is a standard eBay transaction export</li>
+                            <li>Verify the file is not corrupted and can be opened in Excel</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        "No matching orders found" error
+                    </button>
+                </h2>
+                <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Problem:</strong> The ORDER_IDs from API don't match any Bestellnummer in your shop file.</p>
+                        <p><strong>Solution:</strong></p>
+                        <ol>
+                            <li>Check that the date range in Step 1 covers the same period as your shop export</li>
+                            <li>Verify you selected the correct platforms (e.g., eBay if exporting eBay data)</li>
+                            <li>Ensure the shop export is from the same time period as the API data</li>
+                            <li>Try expanding the date range in Step 1</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse4">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        API connection timeout
+                    </button>
+                </h2>
+                <div id="collapse4" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Problem:</strong> The API server is not responding.</p>
+                        <p><strong>Solution:</strong></p>
+                        <ol>
+                            <li>Check your internet connection</li>
+                            <li>Verify the API server is running and accessible</li>
+                            <li>Try a smaller date range to reduce data volume</li>
+                            <li>Wait a few minutes and try again</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- API Information -->
+    <section id="api-info" class="mb-5">
+        <div class="section-header">
+            <h2><i class="bi bi-cloud"></i> API Information</h2>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 col-md-6">
+                        <h6>Endpoint</h6>
+                        <code class="d-block p-2 bg-light rounded mb-3">http://81.201.149.54:23100/procedures/IDM_APP_BELEGINFO</code>
+                        
+                        <h6>Request Parameters</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Description</th>
+                                    <th>Example</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>IDATE_FROM</code></td>
+                                    <td>Start date</td>
+                                    <td>"28.10.2025"</td>
+                                </tr>
+                                <tr>
+                                    <td><code>IDATE_TO</code></td>
+                                    <td>End date</td>
+                                    <td>"29.10.2025"</td>
+                                </tr>
+                                <tr>
+                                    <td><code>IORIGIN</code></td>
+                                    <td>Origin filter</td>
+                                    <td>"'Amazon','Ebay'"</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <h6>Required Columns from API</h6>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                ORDER_ID
+                                <span class="badge bg-primary">Matching key</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                KUNDENNR
+                                <span class="badge bg-success">Maps to KD-NR</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                BELEGNR
+                                <span class="badge bg-success">Maps to RG-NR</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

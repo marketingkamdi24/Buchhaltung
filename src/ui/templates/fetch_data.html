@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Fetch API Data{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-cloud-download"></i>
+Step 1: Fetch API Data
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+            <div>
+                <strong>Configure and fetch data from the API</strong>
+                <p class="mb-0 mt-1">Retrieve transaction data from the database based on date range and origin filters. This data will be used for matching ORDER_ID and mapping KD-NR (KUNDENNR) and RG-NR (BELEGNR) in Step 2.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Configuration Panel -->
+        <div class="col-12 col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-sliders"></i> Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="fetch-form">
+                        <!-- Date Range -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-calendar3"></i> Date Range</h6>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label for="date_from" class="form-label">From Date</label>
+                                    <input type="text" class="form-control" id="date_from" name="date_from" 
+                                           placeholder="DD.MM.YYYY" value="28.10.2025" required>
+                                    <div class="form-text">Start date for data retrieval</div>
+                                </div>
+                                <div class="col-6">
+                                    <label for="date_to" class="form-label">To Date</label>
+                                    <input type="text" class="form-control" id="date_to" name="date_to" 
+                                           placeholder="DD.MM.YYYY" value="29.10.2025" required>
+                                    <div class="form-text">End date for data retrieval</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Origin Selection -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-shop"></i> Platform Selection</h6>
+                            <div class="platform-checkboxes">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="use_amazon" name="use_amazon" checked>
+                                    <label class="form-check-label platform-label amazon" for="use_amazon">
+                                        <i class="bi bi-box-seam"></i> Amazon
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="use_ebay" name="use_ebay" checked>
+                                    <label class="form-check-label platform-label ebay" for="use_ebay">
+                                        <i class="bi bi-cart3"></i> eBay
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Origins -->
+                        <div class="mb-4">
+                            <label for="custom_origins" class="form-label">Custom Origins (Optional)</label>
+                            <input type="text" class="form-control" id="custom_origins" name="custom_origins" 
+                                   placeholder="e.g., Kaufland, MediaMarkt">
+                            <div class="form-text">Add additional origins, comma-separated</div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="fetch-btn">
+                                <i class="bi bi-cloud-download"></i> Fetch Data from API
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Panel -->
+        <div class="col-12 col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Results</h5>
+                    <button class="btn btn-outline-success btn-sm" id="download-btn" style="display: none;">
+                        <i class="bi bi-download"></i> Download Excel
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Loading State -->
+                    <div id="loading-state" class="text-center py-5" style="display: none;">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted">Fetching data from API...</p>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <p class="text-muted mt-3">Configure parameters and click "Fetch Data" to retrieve data</p>
+                    </div>
+                    
+                    <!-- Results State -->
+                    <div id="results-state" style="display: none;">
+                        <!-- Summary Stats -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-4">
+                                <div class="result-stat">
+                                    <div class="stat-number" id="stat-rows">0</div>
+                                    <div class="stat-label">Total Rows</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="result-stat">
+                                    <div class="stat-number" id="stat-cols">0</div>
+                                    <div class="stat-label">Columns</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="result-stat success">
+                                    <div class="stat-number"><i class="bi bi-check-circle"></i></div>
+                                    <div class="stat-label">Ready</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Response Message -->
+                        <div class="response-message mb-4" id="response-message"></div>
+                        
+                        <!-- Data Preview -->
+                        <div class="data-preview">
+                            <h6 class="text-muted mb-3"><i class="bi bi-table"></i> Data Preview (First 50 rows)</h6>
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-sm table-striped table-hover" id="preview-table">
+                                    <thead id="preview-thead"></thead>
+                                    <tbody id="preview-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error State -->
+                    <div id="error-state" style="display: none;">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <span id="error-message"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Next Step Card -->
+    <div class="card mt-4" id="next-step-card" style="display: none;">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-1"><i class="bi bi-arrow-right-circle text-success"></i> Ready for Step 2</h5>
+                    <p class="text-muted mb-0">API data has been fetched successfully. You can now proceed to match and process your shop data.</p>
+                </div>
+                <a href="{{ url_for('process_data_page') }}" class="btn btn-success btn-lg">
+                    <i class="bi bi-arrow-right"></i> Go to Step 2
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentFilePath = null;
+    
+    document.getElementById('fetch-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('results-state').style.display = 'none';
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('loading-state').style.display = 'block';
+        document.getElementById('next-step-card').style.display = 'none';
+        document.getElementById('download-btn').style.display = 'none';
+        
+        // Disable button
+        const btn = document.getElementById('fetch-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Fetching...';
+        
+        try {
+            const response = await fetch('/api/fetch-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date_from: document.getElementById('date_from').value,
+                    date_to: document.getElementById('date_to').value,
+                    use_amazon: document.getElementById('use_amazon').checked,
+                    use_ebay: document.getElementById('use_ebay').checked,
+                    custom_origins: document.getElementById('custom_origins').value
+                })
+            });
+            
+            const result = await response.json();
+            
+            document.getElementById('loading-state').style.display = 'none';
+            
+            if (result.success) {
+                // Update stats
+                document.getElementById('stat-rows').textContent = result.row_count.toLocaleString();
+                document.getElementById('stat-cols').textContent = result.column_count;
+                
+                // Update message
+                document.getElementById('response-message').innerHTML = formatMessage(result.message);
+                
+                // Build preview table
+                buildPreviewTable(result.columns, result.preview);
+                
+                // Show results
+                document.getElementById('results-state').style.display = 'block';
+                document.getElementById('next-step-card').style.display = 'block';
+                
+                // Show download button
+                if (result.file_path) {
+                    currentFilePath = result.file_path;
+                    document.getElementById('download-btn').style.display = 'inline-block';
+                }
+                
+                // Update API status
+                updateApiStatus(true, result.row_count + ' rows loaded');
+                
+                showToast('success', 'Data fetched successfully!');
+            } else {
+                document.getElementById('error-message').textContent = result.message;
+                document.getElementById('error-state').style.display = 'block';
+                showToast('error', 'Failed to fetch data');
+            }
+        } catch (error) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-message').textContent = 'Network error: ' + error.message;
+            document.getElementById('error-state').style.display = 'block';
+            showToast('error', 'Network error occurred');
+        }
+        
+        // Re-enable button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Fetch Data from API';
+    });
+    
+    document.getElementById('download-btn').addEventListener('click', function() {
+        if (currentFilePath) {
+            const filename = currentFilePath.split(/[\\/]/).pop();
+            window.location.href = '/api/download/' + filename;
+        }
+    });
+    
+    function formatMessage(message) {
+        return message
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/✅/g, '<i class="bi bi-check-circle-fill text-success"></i>')
+            .replace(/❌/g, '<i class="bi bi-x-circle-fill text-danger"></i>')
+            .replace(/⚠️/g, '<i class="bi bi-exclamation-triangle-fill text-warning"></i>')
+            .replace(/📊/g, '<i class="bi bi-bar-chart"></i>')
+            .replace(/🔑/g, '<i class="bi bi-key"></i>')
+            .replace(/💾/g, '<i class="bi bi-save"></i>')
+            .replace(/\n/g, '<br>');
+    }
+    
+    function buildPreviewTable(columns, data) {
+        const thead = document.getElementById('preview-thead');
+        const tbody = document.getElementById('preview-tbody');
+        
+        // Build header
+        thead.innerHTML = '<tr>' + columns.map(col => 
+            '<th class="text-nowrap">' + col + '</th>'
+        ).join('') + '</tr>';
+        
+        // Build body
+        tbody.innerHTML = data.map(row => 
+            '<tr>' + columns.map(col => 
+                '<td class="text-nowrap">' + (row[col] !== null && row[col] !== undefined ? row[col] : '') + '</td>'
+            ).join('') + '</tr>'
+        ).join('');
+    }
+</script>
+{% endblock %}
