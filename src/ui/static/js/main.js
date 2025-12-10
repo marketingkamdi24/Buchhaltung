@@ -4,6 +4,15 @@
  */
 
 // ============================================
+// CSRF Token Handler
+// ============================================
+function getCSRFToken() {
+    // Get CSRF token from meta tag if available
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+}
+
+// ============================================
 // Global State
 // ============================================
 const state = {
@@ -297,6 +306,7 @@ function getChartColors() {
 // ============================================
 // Export functions for global access
 // ============================================
+window.getCSRFToken = getCSRFToken;
 window.showToast = showToast;
 window.updateApiStatus = updateApiStatus;
 window.checkApiStatus = checkApiStatus;

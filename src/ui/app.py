@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from functools import wraps
 
-from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import pandas as pd
 import plotly
@@ -26,6 +27,7 @@ from src.api.client import APIClient
 from src.processors.data_matcher import DataMatcher
 from src.processors.data_analyzer import DataAnalyzer
 from src.utils.helpers import find_available_port, is_port_in_use, kill_process_on_port
+from src.ui.models import db, User, init_db
 
 
 # Initialize Flask app
@@ -38,6 +40,39 @@ app = Flask(__name__,
 _config = get_config()
 app.secret_key = _config.app.secret_key
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
+
+# Database configuration
+instance_path = Path(__file__).parent.parent.parent / 'instance'
+instance_path.mkdir(parents=True, exist_ok=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{instance_path}/buchhaltung.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login."""
+    return User.query.get(int(user_id))
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Handle unauthorized access - return JSON for API requests, redirect for pages."""
+    # Only return JSON for actual API endpoints (not regular pages)
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'success': False,
+            'message': 'Authentication required. Please log in.',
+            'redirect': url_for('login')
+        }), 401
+    flash('Please log in to access this page.', 'info')
+    return redirect(url_for('login', next=request.url))
 
 # Store session data
 api_data_store = {}  # session_id -> DataFrame
@@ -116,13 +151,59 @@ Disallow: /
 
 
 # Routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page and authentication."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        remember = request.form.get('remember', False)
+        
+        if not username or not password:
+            flash('Please enter both username and password.', 'error')
+            return render_template('login.html')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            if not user.is_active:
+                flash('Your account has been deactivated.', 'error')
+                return render_template('login.html')
+            
+            login_user(user, remember=bool(remember))
+            user.update_last_login()
+            
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password.', 'error')
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout the current user."""
+    logout_user()
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('login'))
+
+
 @app.route('/')
+@login_required
 def index():
     """Main dashboard with analytics."""
     return render_template('index.html', page='dashboard')
 
 
 @app.route('/process')
+@login_required
 def process_page():
     """Process Data page - unified fetch and process."""
     has_api_data = get_api_data() is not None
@@ -130,6 +211,7 @@ def process_page():
 
 
 @app.route('/help')
+@login_required
 def help_page():
     """Help & Documentation page."""
     return render_template('help.html', page='help')
@@ -137,6 +219,7 @@ def help_page():
 
 # API Endpoints
 @app.route('/api/fetch-data', methods=['POST'])
+@login_required
 def api_fetch_data():
     """API endpoint to fetch data from external API."""
     try:
@@ -189,6 +272,7 @@ def api_fetch_data():
 
 
 @app.route('/api/process-data', methods=['POST'])
+@login_required
 def api_process_data():
     """API endpoint to match and process shop data."""
     try:
@@ -229,10 +313,10 @@ def api_process_data():
                 # Get download URLs
                 matched_url = None
                 modified_url = None
-                if result.file_path:
-                    matched_url = f'/api/download/{os.path.basename(result.file_path)}'
-                if hasattr(result, 'modified_file_path') and result.modified_file_path:
-                    modified_url = f'/api/download/{os.path.basename(result.modified_file_path)}'
+                if result.matched_file_path:
+                    matched_url = f'/api/download/{os.path.basename(result.matched_file_path)}'
+                if result.processed_file_path:
+                    modified_url = f'/api/download/{os.path.basename(result.processed_file_path)}'
                 
                 return jsonify({
                     'success': True,
@@ -265,6 +349,7 @@ def api_process_data():
 
 
 @app.route('/api/analytics-data', methods=['POST'])
+@login_required
 def api_analytics_data():
     """API endpoint to get analytics data."""
     try:
@@ -436,6 +521,7 @@ def api_analytics_data():
 
 
 @app.route('/api/download/<path:filename>')
+@login_required
 def download_file(filename):
     """Download a processed file."""
     try:
@@ -450,6 +536,7 @@ def download_file(filename):
 
 
 @app.route('/api/check-api-data')
+@login_required
 def check_api_data():
     """Check if API data is available in session."""
     api_data = get_api_data()
@@ -469,12 +556,17 @@ def check_api_data():
 
 def create_app():
     """Create and configure the Flask application."""
+    # Initialize database
+    init_db(app)
     return app
 
 
 def main():
     """Main entry point for the application."""
     config = get_config()
+    
+    # Initialize database
+    init_db(app)
     
     # Find available port
     port = config.app.default_port
