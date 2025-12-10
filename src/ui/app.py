@@ -47,6 +47,9 @@ instance_path.mkdir(parents=True, exist_ok=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{instance_path}/buchhaltung.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize database with app
+db.init_app(app)
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -58,7 +61,7 @@ login_manager.login_message_category = 'info'
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login."""
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 @login_manager.unauthorized_handler
@@ -556,8 +559,12 @@ def check_api_data():
 
 def create_app():
     """Create and configure the Flask application."""
-    # Initialize database
-    init_db(app)
+    # Database already initialized at module level with db.init_app(app)
+    # Just ensure tables exist and create default user
+    with app.app_context():
+        db.create_all()
+        from src.ui.models import create_default_user
+        create_default_user()
     return app
 
 
@@ -565,8 +572,11 @@ def main():
     """Main entry point for the application."""
     config = get_config()
     
-    # Initialize database
-    init_db(app)
+    # Ensure database tables exist and create default user
+    with app.app_context():
+        db.create_all()
+        from src.ui.models import create_default_user
+        create_default_user()
     
     # Find available port
     port = config.app.default_port
