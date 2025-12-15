@@ -16,10 +16,9 @@ services:
         generateValue: true
       - key: DEBUG
         value: "false"
-      # SECURITY: Set these in Render dashboard for secure login credentials
-      # If APP_PASSWORD is not set, a random password will be generated on startup
+      # Login credentials - set in Render dashboard
       - key: APP_USERNAME
-        sync: false
+        value: "buchhaltung"
       - key: APP_PASSWORD
         sync: false
       - key: API_BASE_URL

@@ -3,7 +3,6 @@ Database models for Buchhaltung application.
 User management with SQLAlchemy.
 """
 import os
-import secrets
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -12,9 +11,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 # Security configuration from environment variables
-# IMPORTANT: Set these environment variables in production!
-DEFAULT_USERNAME = os.environ.get('APP_USERNAME', 'admin')
-DEFAULT_PASSWORD = os.environ.get('APP_PASSWORD', None)  # Must be set in production!
+# Credentials are set via APP_USERNAME and APP_PASSWORD environment variables
+DEFAULT_USERNAME = os.environ.get('APP_USERNAME', 'buchhaltung')
+DEFAULT_PASSWORD = os.environ.get('APP_PASSWORD', 'buchhaltung123')
 
 # Failed login tracking (in-memory, resets on restart)
 _failed_login_attempts = {}  # username -> {'count': int, 'locked_until': datetime}
@@ -122,29 +121,13 @@ def upgrade_database():
         conn.close()
 
 
-def generate_secure_password(length=16):
-    """Generate a cryptographically secure random password."""
-    return secrets.token_urlsafe(length)
-
-
 def create_default_user():
-    """Create the default admin user if it doesn't exist.
+    """Create the default user if it doesn't exist, or update password if it changed.
     
-    SECURITY: In production, set APP_USERNAME and APP_PASSWORD environment variables.
-    If APP_PASSWORD is not set, a random secure password is generated and printed once.
+    Credentials are configured via APP_USERNAME and APP_PASSWORD environment variables.
     """
     username = DEFAULT_USERNAME
     password = DEFAULT_PASSWORD
-    
-    # Check if password is set via environment variable
-    if not password:
-        # Generate a secure random password if not provided
-        password = generate_secure_password(20)
-        print("=" * 60)
-        print("SECURITY WARNING: APP_PASSWORD environment variable not set!")
-        print(f"Generated secure password for user '{username}': {password}")
-        print("Please set APP_PASSWORD environment variable in production!")
-        print("=" * 60)
     
     existing_user = User.query.filter_by(username=username).first()
     if not existing_user:
@@ -154,10 +137,9 @@ def create_default_user():
         db.session.commit()
         print(f"User '{username}' created successfully.")
     else:
-        # Update password if environment variable changed
-        if DEFAULT_PASSWORD:
-            existing_user.set_password(password)
-            db.session.commit()
-            print(f"User '{username}' password updated from environment variable.")
-        else:
-            print(f"User '{username}' already exists.")
+        # Always update the password to ensure it uses the latest hashing and value
+        existing_user.set_password(password)
+        existing_user.failed_login_count = 0  # Reset any lockout
+        existing_user.locked_until = None
+        db.session.commit()
+        print(f"User '{username}' password updated.")
