@@ -27,7 +27,7 @@ from src.api.client import APIClient
 from src.processors.data_matcher import DataMatcher
 from src.processors.data_analyzer import DataAnalyzer
 from src.utils.helpers import find_available_port, is_port_in_use, kill_process_on_port
-from src.ui.models import db, User, init_db
+from src.ui.models import db, User, init_db, upgrade_database
 
 
 # Initialize Flask app
@@ -193,11 +193,34 @@ def set_api_data(df):
     api_data_store[session_id] = df
 
 
-# Add X-Robots-Tag header to all responses
+# Add security headers to all responses
 @app.after_request
-def add_noindex_header(response):
-    """Add X-Robots-Tag header to prevent search engine indexing."""
+def add_security_headers(response):
+    """Add security headers to all responses."""
+    # Prevent search engine indexing
     response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    
+    # Security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    # Content Security Policy - restrict resource loading
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.plot.ly; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
+    
+    # Strict Transport Security (only in production with HTTPS)
+    if is_production:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
     return response
 
 
@@ -214,7 +237,7 @@ Disallow: /
 # Routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login page and authentication."""
+    """Login page and authentication with security features."""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
@@ -229,20 +252,38 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         
+        # Check if account is locked
+        if user and user.is_locked():
+            remaining_time = (user.locked_until - datetime.utcnow()).total_seconds() / 60
+            flash(f'Account is locked due to too many failed attempts. Try again in {int(remaining_time) + 1} minutes.', 'error')
+            return render_template('login.html')
+        
         if user and user.check_password(password):
             if not user.is_active:
                 flash('Your account has been deactivated.', 'error')
                 return render_template('login.html')
             
+            # Successful login - reset failed attempts
             login_user(user, remember=bool(remember))
             user.update_last_login()
             
+            # Validate next URL to prevent open redirect vulnerability
             next_page = request.args.get('next')
-            if next_page:
+            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
                 return redirect(next_page)
             return redirect(url_for('index'))
         else:
-            flash('Invalid username or password.', 'error')
+            # Record failed login attempt
+            if user:
+                user.record_failed_login()
+                remaining_attempts = max(0, 5 - (user.failed_login_count or 0))
+                if remaining_attempts > 0:
+                    flash(f'Invalid username or password. {remaining_attempts} attempts remaining.', 'error')
+                else:
+                    flash('Account locked due to too many failed attempts. Please try again later.', 'error')
+            else:
+                # Don't reveal if username exists
+                flash('Invalid username or password.', 'error')
     
     return render_template('login.html')
 
@@ -660,6 +701,9 @@ def check_api_data():
 
 def create_app():
     """Create and configure the Flask application."""
+    # Run database migration to add new security columns if needed
+    upgrade_database()
+    
     # Database already initialized at module level with db.init_app(app)
     # Just ensure tables exist and create default user
     with app.app_context():
@@ -672,6 +716,9 @@ def create_app():
 def main():
     """Main entry point for the application."""
     config = get_config()
+    
+    # Run database migration to add new security columns if needed
+    upgrade_database()
     
     # Ensure database tables exist and create default user
     with app.app_context():

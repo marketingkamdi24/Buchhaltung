@@ -10,10 +10,18 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.6"
+      - key: FLASK_ENV
+        value: "production"
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: "false"
+      # SECURITY: Set these in Render dashboard for secure login credentials
+      # If APP_PASSWORD is not set, a random password will be generated on startup
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
       - key: API_BASE_URL
         sync: false
       - key: API_CONNECTION_ID
