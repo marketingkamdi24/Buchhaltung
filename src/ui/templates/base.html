@@ -99,11 +99,213 @@
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
     </div>
     
+    <!-- Session Timeout Warning Modal -->
+    <div class="modal fade" id="sessionTimeoutModal" tabindex="-1" aria-labelledby="sessionTimeoutModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="sessionTimeoutModalLabel">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Session Expiring Soon
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>Your session will expire in <strong><span id="sessionCountdown">60</span> seconds</strong> due to inactivity.</p>
+                    <p>Click "Stay Logged In" to continue your session, or you will be automatically logged out.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="logoutNowBtn">Logout Now</button>
+                    <button type="button" class="btn btn-primary" id="stayLoggedInBtn">
+                        <i class="bi bi-check-circle me-1"></i>Stay Logged In
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Session Expired Modal -->
+    <div class="modal fade" id="sessionExpiredModal" tabindex="-1" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="sessionExpiredModalLabel">
+                        <i class="bi bi-lock me-2"></i>Session Expired
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>Your session has expired due to inactivity.</p>
+                    <p>Please log in again to continue.</p>
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ url_for('login') }}" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Go to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- Session Timeout Handler -->
+    <script>
+    (function() {
+        const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+        const WARNING_BEFORE_MS = 60 * 1000; // Show warning 60 seconds before expiry
+        const CHECK_INTERVAL_MS = 30 * 1000; // Check session status every 30 seconds
+        
+        let lastActivity = Date.now();
+        let warningShown = false;
+        let countdownInterval = null;
+        let sessionCheckInterval = null;
+        
+        const timeoutModal = document.getElementById('sessionTimeoutModal');
+        const expiredModal = document.getElementById('sessionExpiredModal');
+        const countdownDisplay = document.getElementById('sessionCountdown');
+        const stayLoggedInBtn = document.getElementById('stayLoggedInBtn');
+        const logoutNowBtn = document.getElementById('logoutNowBtn');
+        
+        let bsTimeoutModal = null;
+        let bsExpiredModal = null;
+        
+        // Initialize modals after Bootstrap loads
+        function initModals() {
+            if (timeoutModal) {
+                bsTimeoutModal = new bootstrap.Modal(timeoutModal);
+            }
+            if (expiredModal) {
+                bsExpiredModal = new bootstrap.Modal(expiredModal);
+            }
+        }
+        
+        // Reset activity timer on user interaction
+        function resetActivity() {
+            lastActivity = Date.now();
+            if (warningShown && bsTimeoutModal) {
+                bsTimeoutModal.hide();
+                warningShown = false;
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+            }
+        }
+        
+        // Activity events to track
+        ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(event => {
+            document.addEventListener(event, resetActivity, { passive: true });
+        });
+        
+        // Check session status with server
+        async function checkSessionStatus() {
+            try {
+                const response = await fetch('/api/session-status', {
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                
+                if (!data.authenticated || data.expired) {
+                    showExpiredModal();
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Session check failed:', error);
+                return true; // Don't logout on network error
+            }
+        }
+        
+        // Show warning modal with countdown
+        function showWarningModal() {
+            if (warningShown || !bsTimeoutModal) return;
+            
+            warningShown = true;
+            let secondsLeft = 60;
+            countdownDisplay.textContent = secondsLeft;
+            
+            bsTimeoutModal.show();
+            
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                countdownDisplay.textContent = secondsLeft;
+                
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    bsTimeoutModal.hide();
+                    showExpiredModal();
+                }
+            }, 1000);
+        }
+        
+        // Show expired modal and redirect
+        function showExpiredModal() {
+            if (bsTimeoutModal) bsTimeoutModal.hide();
+            if (bsExpiredModal) bsExpiredModal.show();
+            
+            // Clear any intervals
+            if (countdownInterval) clearInterval(countdownInterval);
+            if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+            
+            // Redirect after 3 seconds
+            setTimeout(() => {
+                window.location.href = '{{ url_for("login") }}';
+            }, 3000);
+        }
+        
+        // Stay logged in - refresh session
+        async function stayLoggedIn() {
+            if (bsTimeoutModal) bsTimeoutModal.hide();
+            warningShown = false;
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            
+            // Make a request to refresh the session
+            await checkSessionStatus();
+            resetActivity();
+        }
+        
+        // Logout now
+        function logoutNow() {
+            window.location.href = '{{ url_for("logout") }}';
+        }
+        
+        // Main check function
+        function checkActivity() {
+            const timeSinceActivity = Date.now() - lastActivity;
+            const timeUntilExpiry = SESSION_TIMEOUT_MS - timeSinceActivity;
+            
+            if (timeUntilExpiry <= 0) {
+                showExpiredModal();
+            } else if (timeUntilExpiry <= WARNING_BEFORE_MS && !warningShown) {
+                showWarningModal();
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initModals();
+            
+            // Bind button events
+            if (stayLoggedInBtn) {
+                stayLoggedInBtn.addEventListener('click', stayLoggedIn);
+            }
+            if (logoutNowBtn) {
+                logoutNowBtn.addEventListener('click', logoutNow);
+            }
+            
+            // Start checking activity
+            setInterval(checkActivity, 1000);
+            
+            // Also check with server periodically
+            sessionCheckInterval = setInterval(checkSessionStatus, CHECK_INTERVAL_MS);
+        });
+    })();
+    </script>
     
     {% block scripts %}{% endblock %}
 </body>

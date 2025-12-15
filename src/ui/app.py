@@ -41,14 +41,17 @@ _config = get_config()
 app.secret_key = _config.app.secret_key
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 
-# Session configuration - 30 minute timeout
+# Session configuration - 15 minute timeout for security
+SESSION_TIMEOUT_MINUTES = 15
 app.config['SESSION_PERMANENT'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=SESSION_TIMEOUT_MINUTES)
 # SESSION_COOKIE_SECURE should only be True in production with HTTPS
-# Setting to False allows cookies over HTTP for local development
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
-app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+# Detect production by checking for render.com or FLASK_ENV
+is_production = os.environ.get('FLASK_ENV') == 'production' or 'onrender.com' in os.environ.get('RENDER_EXTERNAL_URL', '')
+app.config['SESSION_COOKIE_SECURE'] = is_production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session on each request
 
 # Database configuration
 instance_path = Path(__file__).parent.parent.parent / 'instance'
@@ -75,9 +78,48 @@ def load_user(user_id):
 
 @app.before_request
 def before_request():
-    """Ensure session is permanent and refresh on each request."""
+    """
+    Check session activity and expire if inactive for 15 minutes.
+    This runs before every request to enforce session timeout.
+    """
+    # Skip for static files and login page
+    if request.endpoint in ('static', 'login', 'robots_txt') or request.path.startswith('/static/'):
+        return
+    
     session.permanent = True
-    app.permanent_session_lifetime = timedelta(minutes=30)
+    now = datetime.utcnow()
+    
+    # Check if session has expired due to inactivity
+    last_activity = session.get('last_activity')
+    if last_activity:
+        # Convert string back to datetime if needed
+        if isinstance(last_activity, str):
+            try:
+                last_activity = datetime.fromisoformat(last_activity)
+            except ValueError:
+                last_activity = None
+        
+        if last_activity:
+            inactive_time = now - last_activity
+            if inactive_time > timedelta(minutes=SESSION_TIMEOUT_MINUTES):
+                # Session has expired - clear everything
+                session_id = session.get('session_id')
+                if session_id and session_id in api_data_store:
+                    del api_data_store[session_id]
+                
+                # Clear the session completely
+                session.clear()
+                
+                # Force logout if user is authenticated
+                if current_user.is_authenticated:
+                    logout_user()
+                
+                # Redirect to login with message
+                flash('Your session has expired due to inactivity. Please log in again.', 'warning')
+                return redirect(url_for('login'))
+    
+    # Update last activity timestamp
+    session['last_activity'] = now.isoformat()
 
 
 @login_manager.unauthorized_handler
@@ -208,10 +250,53 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
-    """Logout the current user."""
+    """Logout the current user and clear all session data."""
+    # Clear API data store for this session
+    session_id = session.get('session_id')
+    if session_id and session_id in api_data_store:
+        del api_data_store[session_id]
+    
+    # Clear the session completely
+    session.clear()
+    
+    # Logout user from Flask-Login
     logout_user()
+    
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
+
+@app.route('/api/session-status')
+def session_status():
+    """API endpoint to check session status for client-side timeout handling."""
+    if not current_user.is_authenticated:
+        return jsonify({
+            'authenticated': False,
+            'expired': True,
+            'redirect': url_for('login')
+        })
+    
+    last_activity = session.get('last_activity')
+    now = datetime.utcnow()
+    
+    if last_activity:
+        if isinstance(last_activity, str):
+            try:
+                last_activity = datetime.fromisoformat(last_activity)
+            except ValueError:
+                last_activity = now
+        
+        inactive_seconds = (now - last_activity).total_seconds()
+        remaining_seconds = max(0, (SESSION_TIMEOUT_MINUTES * 60) - inactive_seconds)
+    else:
+        remaining_seconds = SESSION_TIMEOUT_MINUTES * 60
+    
+    return jsonify({
+        'authenticated': True,
+        'expired': False,
+        'remaining_seconds': int(remaining_seconds),
+        'timeout_minutes': SESSION_TIMEOUT_MINUTES
+    })
 
 
 @app.route('/')
