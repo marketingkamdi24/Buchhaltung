@@ -6,7 +6,7 @@ import os
 import sys
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from functools import wraps
 
@@ -41,6 +41,15 @@ _config = get_config()
 app.secret_key = _config.app.secret_key
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 
+# Session configuration - 30 minute timeout
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+# SESSION_COOKIE_SECURE should only be True in production with HTTPS
+# Setting to False allows cookies over HTTP for local development
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+
 # Database configuration
 instance_path = Path(__file__).parent.parent.parent / 'instance'
 instance_path.mkdir(parents=True, exist_ok=True)
@@ -62,6 +71,13 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     """Load user by ID for Flask-Login."""
     return db.session.get(User, int(user_id))
+
+
+@app.before_request
+def before_request():
+    """Ensure session is permanent and refresh on each request."""
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=30)
 
 
 @login_manager.unauthorized_handler

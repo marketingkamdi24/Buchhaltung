@@ -78,6 +78,112 @@ class ExcelProcessor:
         """Add a message to the processing log."""
         self.results.append(message)
     
+    def _consolidate_orders(self, raw_data_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Consolidate duplicate orders that have the same Bestellnummer, Nutzername, and Name des Käufers.
+        
+        When multiple rows have the same key values, consolidate them into one row by:
+        - Summing J (Zwischensumme), K (Fixer Anteil), L (Variabler Anteil) columns
+        - Taking the Transaktionsbetrag from the summary row (the one that has it non-zero)
+        - Taking the Betrag abzgl. Kosten from the summary row
+        - Keeping other values from the first row
+        
+        Args:
+            raw_data_rows: List of row dictionaries before consolidation
+            
+        Returns:
+            List of consolidated row dictionaries
+        """
+        from collections import defaultdict
+        
+        # Group rows by (Bestellnummer, Nutzername, Name)
+        groups = defaultdict(list)
+        for row in raw_data_rows:
+            key = (row['bestellnummer'], row['nutzername'], row['name'])
+            groups[key].append(row)
+        
+        consolidated = []
+        for key, rows in groups.items():
+            if len(rows) == 1:
+                # No duplicates, keep as-is
+                consolidated.append(rows[0])
+            else:
+                # Multiple rows with same key - consolidate
+                # Find the summary row (has Transaktionsbetrag value)
+                summary_row = None
+                detail_rows = []
+                
+                for row in rows:
+                    if row['transaktionsbetrag'] != 0:
+                        summary_row = row
+                    else:
+                        detail_rows.append(row)
+                
+                # If no explicit summary row found, use first row
+                if summary_row is None:
+                    summary_row = rows[0]
+                    detail_rows = rows[1:]
+                
+                # Create consolidated row starting from summary row
+                consolidated_row = summary_row.copy()
+                
+                # Sum the numeric columns from all rows:
+                # J (zwischensumme), K (fixer_anteil), L (variabler_anteil)
+                # Also sum other fee columns
+                total_zwischensumme = sum(row['zwischensumme'] for row in rows)
+                total_fixer = sum(row['fixer_anteil'] for row in rows)
+                total_variabler = sum(row['variabler_anteil'] for row in rows)
+                total_gebuehr_hohe_quote = sum(row['gebuehr_hohe_quote'] for row in rows)
+                total_gebuehr_servicestatus = sum(row['gebuehr_servicestatus'] for row in rows)
+                total_internationale_gebuehr = sum(row['internationale_gebuehr'] for row in rows)
+                
+                consolidated_row['zwischensumme'] = total_zwischensumme
+                consolidated_row['fixer_anteil'] = total_fixer
+                consolidated_row['variabler_anteil'] = total_variabler
+                consolidated_row['gebuehr_hohe_quote'] = total_gebuehr_hohe_quote
+                consolidated_row['gebuehr_servicestatus'] = total_gebuehr_servicestatus
+                consolidated_row['internationale_gebuehr'] = total_internationale_gebuehr
+                
+                # If betrag_abzgl is 0 in summary, try to find it in another row
+                if consolidated_row['betrag_abzgl'] == 0:
+                    for row in rows:
+                        if row['betrag_abzgl'] != 0:
+                            consolidated_row['betrag_abzgl'] = row['betrag_abzgl']
+                            break
+                
+                consolidated.append(consolidated_row)
+        
+        return consolidated
+    
+    def _apply_refund_rules(self, data_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Apply special rules for refund (Rückerstattung) transactions.
+        
+        When Typ is "Rückerstattung", set J (Zwischensumme) and T to same value as I (Transaktionsbetrag).
+        
+        Note: "Fall" and "Einbehalt" types are left as-is (require manual review).
+        
+        Args:
+            data_rows: List of row dictionaries
+            
+        Returns:
+            List of row dictionaries with refund rules applied
+        """
+        for row in data_rows:
+            typ = str(row.get('typ', ''))
+            
+            # Check for Rückerstattung (refund)
+            if 'ckerstattung' in typ or 'Rückerstattung' in typ:
+                # For refunds: I (Transaktionsbetrag), J (Zwischensumme), and T should all be the same
+                transaktionsbetrag = row['transaktionsbetrag']
+                row['zwischensumme'] = transaktionsbetrag
+                # T column will be set from zwischensumme during output
+            
+            # "Fall" and "Einbehalt" are left as-is (manual review required)
+            # No special processing needed
+        
+        return data_rows
+    
     def process(self, file_path: str, api_data: Optional[pd.DataFrame] = None) -> ProcessingResult:
         """
         Process the Excel file according to specified rules.
@@ -154,7 +260,7 @@ class ExcelProcessor:
             self._log(f"✅ Extracted metadata: Verkäufer={verkaeufer_value}, Betrag={betrag_value}")
             
             # Step 4: Read all data rows and separate "Andere Gebühr" from regular transactions
-            data_rows = []
+            raw_data_rows = []
             andere_gebuehr_rows = []
             
             # Get necessary column indices
@@ -214,10 +320,21 @@ class ExcelProcessor:
                 if 'Andere Geb' in str(typ):
                     andere_gebuehr_rows.append(row_data)
                 else:
-                    data_rows.append(row_data)
+                    raw_data_rows.append(row_data)
             
-            self._log(f"✅ Found {len(data_rows)} regular transactions")
+            self._log(f"✅ Found {len(raw_data_rows)} regular transactions (before consolidation)")
             self._log(f"✅ Found {len(andere_gebuehr_rows)} 'Andere Gebühr' transactions")
+            
+            # Step 4b: Consolidate duplicate orders
+            # Group rows by (Bestellnummer, Nutzername, Name) - if same, consolidate by summing J, K, L, T values
+            data_rows = self._consolidate_orders(raw_data_rows)
+            
+            if len(data_rows) < len(raw_data_rows):
+                self._log(f"✅ Consolidated to {len(data_rows)} transactions (merged {len(raw_data_rows) - len(data_rows)} duplicate rows)")
+            
+            # Step 4c: Apply refund handling (Rückerstattung)
+            # When Typ is "Rückerstattung", set J and T to same value as I (Transaktionsbetrag)
+            data_rows = self._apply_refund_rules(data_rows)
             
             # Count matched KD-NR and RG-NR
             kdnr_matched = sum(1 for r in data_rows if r['kdnr'] is not None)

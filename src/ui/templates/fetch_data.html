@@ -137,14 +137,31 @@ Step 1: Fetch API Data
                         <!-- Response Message -->
                         <div class="response-message mb-4" id="response-message"></div>
                         
-                        <!-- Data Preview -->
+                        <!-- Data Preview - Expandable -->
                         <div class="data-preview">
-                            <h6 class="text-muted mb-3"><i class="bi bi-table"></i> Data Preview (First 50 rows)</h6>
-                            <div class="table-responsive" style="max-height: 400px;">
-                                <table class="table table-sm table-striped table-hover" id="preview-table">
-                                    <thead id="preview-thead"></thead>
-                                    <tbody id="preview-tbody"></tbody>
-                                </table>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#dataPreviewCollapse"
+                                        aria-expanded="false"
+                                        aria-controls="dataPreviewCollapse"
+                                        id="preview-toggle-btn">
+                                    <i class="bi bi-table"></i>
+                                    <span>View Fetched Data</span>
+                                    <i class="bi bi-chevron-down toggle-icon" id="toggle-icon"></i>
+                                </button>
+                                <span class="badge bg-secondary" id="preview-row-count">0 rows</span>
+                            </div>
+                            <div class="collapse" id="dataPreviewCollapse">
+                                <div class="card card-body p-0 border-0">
+                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped table-hover mb-0" id="preview-table">
+                                            <thead class="table-light sticky-top" id="preview-thead"></thead>
+                                            <tbody id="preview-tbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -225,6 +242,10 @@ Step 1: Fetch API Data
                 // Update message
                 document.getElementById('response-message').innerHTML = formatMessage(result.message);
                 
+                // Update preview row count badge
+                document.getElementById('preview-row-count').textContent =
+                    result.preview.length + ' of ' + result.row_count.toLocaleString() + ' rows';
+                
                 // Build preview table
                 buildPreviewTable(result.columns, result.preview);
                 
@@ -283,16 +304,35 @@ Step 1: Fetch API Data
         const tbody = document.getElementById('preview-tbody');
         
         // Build header
-        thead.innerHTML = '<tr>' + columns.map(col => 
+        thead.innerHTML = '<tr>' + columns.map(col =>
             '<th class="text-nowrap">' + col + '</th>'
         ).join('') + '</tr>';
         
         // Build body
-        tbody.innerHTML = data.map(row => 
-            '<tr>' + columns.map(col => 
+        tbody.innerHTML = data.map(row =>
+            '<tr>' + columns.map(col =>
                 '<td class="text-nowrap">' + (row[col] !== null && row[col] !== undefined ? row[col] : '') + '</td>'
             ).join('') + '</tr>'
         ).join('');
     }
+    
+    // Handle collapse toggle icon animation
+    const dataPreviewCollapse = document.getElementById('dataPreviewCollapse');
+    const toggleIcon = document.getElementById('toggle-icon');
+    const previewToggleBtn = document.getElementById('preview-toggle-btn');
+    
+    dataPreviewCollapse.addEventListener('show.bs.collapse', function () {
+        toggleIcon.classList.remove('bi-chevron-down');
+        toggleIcon.classList.add('bi-chevron-up');
+        previewToggleBtn.classList.remove('btn-outline-secondary');
+        previewToggleBtn.classList.add('btn-secondary');
+    });
+    
+    dataPreviewCollapse.addEventListener('hide.bs.collapse', function () {
+        toggleIcon.classList.remove('bi-chevron-up');
+        toggleIcon.classList.add('bi-chevron-down');
+        previewToggleBtn.classList.remove('btn-secondary');
+        previewToggleBtn.classList.add('btn-outline-secondary');
+    });
 </script>
 {% endblock %}
