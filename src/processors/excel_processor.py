@@ -80,7 +80,7 @@ class ExcelProcessor:
     
     def _consolidate_orders(self, raw_data_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Consolidate duplicate orders that have the same Bestellnummer, Nutzername, and Name des Käufers.
+        Consolidate duplicate orders that have the same Bestellnummer and Typ.
         
         When multiple rows have the same key values, consolidate them into one row by:
         - Summing J (Zwischensumme), K (Fixer Anteil), L (Variabler Anteil) columns
@@ -96,10 +96,10 @@ class ExcelProcessor:
         """
         from collections import defaultdict
         
-        # Group rows by (Bestellnummer, Nutzername, Name)
+        # Group rows by (Bestellnummer, Typ) - only consolidate when both match
         groups = defaultdict(list)
         for row in raw_data_rows:
-            key = (row['bestellnummer'], row['nutzername'], row['name'])
+            key = (row['bestellnummer'], row['typ'])
             groups[key].append(row)
         
         consolidated = []
@@ -326,7 +326,7 @@ class ExcelProcessor:
             self._log(f"✅ Found {len(andere_gebuehr_rows)} 'Andere Gebühr' transactions")
             
             # Step 4b: Consolidate duplicate orders
-            # Group rows by (Bestellnummer, Nutzername, Name) - if same, consolidate by summing J, K, L, T values
+            # Group rows by (Bestellnummer, Typ) - if same, consolidate by summing J, K, L, T values
             data_rows = self._consolidate_orders(raw_data_rows)
             
             if len(data_rows) < len(raw_data_rows):
