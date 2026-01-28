@@ -390,8 +390,8 @@ def api_fetch_data():
             if response.file_path:
                 download_url = f'/api/download/{os.path.basename(response.file_path)}'
             
-            # Prepare preview data
-            preview_data = response.data.head(50).to_dict('records')
+            # Prepare preview data (replace NaN with None for valid JSON)
+            preview_data = response.data.head(50).fillna(value=pd.NA).replace({pd.NA: None}).to_dict('records')
             columns = list(response.data.columns)
             
             return jsonify({
@@ -447,7 +447,8 @@ def api_process_data():
                 os.remove(str(temp_path))
             
             if result.success:
-                preview_data = result.data.head(50).to_dict('records') if result.data is not None else []
+                # Replace NaN with None for valid JSON serialization
+                preview_data = result.data.head(50).fillna(value=pd.NA).replace({pd.NA: None}).to_dict('records') if result.data is not None else []
                 columns = list(result.data.columns) if result.data is not None else []
                 
                 # Extract stats from result
