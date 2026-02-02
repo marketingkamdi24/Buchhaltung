@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Übersicht{% endblock %}
 
 {% block page_title %}
 <i class="bi bi-speedometer2"></i>
-Analytics Dashboard
+Analyse-Übersicht
 {% endblock %}
 
 {% block content %}
@@ -15,15 +15,15 @@ Analytics Dashboard
             <div class="card-body py-3">
                 <form id="analytics-form" class="row g-3 align-items-end">
                     <div class="col-auto">
-                        <label class="form-label small text-muted">From Date</label>
+                        <label class="form-label small text-muted">Von Datum</label>
                         <input type="text" class="form-control" id="date_from" placeholder="DD.MM.YYYY" value="21.10.2025">
                     </div>
                     <div class="col-auto">
-                        <label class="form-label small text-muted">To Date</label>
+                        <label class="form-label small text-muted">Bis Datum</label>
                         <input type="text" class="form-control" id="date_to" placeholder="DD.MM.YYYY" value="28.10.2025">
                     </div>
                     <div class="col-auto">
-                        <label class="form-label small text-muted">Platforms</label>
+                        <label class="form-label small text-muted">Plattformen</label>
                         <div class="btn-group" role="group">
                             <input type="checkbox" class="btn-check" id="use_amazon" checked>
                             <label class="btn btn-outline-warning btn-sm" for="use_amazon">Amazon</label>
@@ -32,11 +32,11 @@ Analytics Dashboard
                         </div>
                     </div>
                     <div class="col-auto">
-                        <input type="text" class="form-control" id="custom_origins" placeholder="Custom origins...">
+                        <input type="text" class="form-control" id="custom_origins" placeholder="Eigene Herkunft...">
                     </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-primary" id="load-btn">
-                            <i class="bi bi-graph-up"></i> Load Analytics
+                            <i class="bi bi-graph-up"></i> Analyse laden
                         </button>
                     </div>
                 </form>
@@ -47,7 +47,7 @@ Analytics Dashboard
     <!-- Loading State -->
     <div id="loading-state" class="text-center py-5" style="display: none;">
         <div class="spinner-border text-primary mb-3" role="status"></div>
-        <p class="text-muted">Loading analytics data...</p>
+        <p class="text-muted">Analysedaten werden geladen...</p>
     </div>
     
     <!-- Empty State -->
@@ -55,11 +55,11 @@ Analytics Dashboard
         <div class="empty-icon">
             <i class="bi bi-bar-chart-line-fill"></i>
         </div>
-        <h3>Welcome to Buchhaltung</h3>
-        <p class="text-muted">Load data using the controls above to see your analytics dashboard</p>
+        <h3>Willkommen bei Buchhaltung</h3>
+        <p class="text-muted">Laden Sie Daten mit den obigen Steuerelementen, um Ihre Analyse-Übersicht zu sehen</p>
         <div class="quick-actions mt-4">
             <a href="{{ url_for('process_page') }}" class="btn btn-outline-primary btn-lg">
-                <i class="bi bi-gear-wide-connected"></i> Process Excel Files
+                <i class="bi bi-gear-wide-connected"></i> Excel-Dateien verarbeiten
             </a>
         </div>
     </div>
@@ -71,37 +71,37 @@ Analytics Dashboard
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value" id="kpi-gross-revenue">-</div>
-                    <div class="kpi-label">Gross Revenue</div>
+                    <div class="kpi-label">Bruttoumsatz</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value text-success" id="kpi-profit">-</div>
-                    <div class="kpi-label">Profit</div>
+                    <div class="kpi-label">Gewinn</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value text-info" id="kpi-orders">-</div>
-                    <div class="kpi-label">Orders</div>
+                    <div class="kpi-label">Bestellungen</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value" id="kpi-customers">-</div>
-                    <div class="kpi-label">Customers</div>
+                    <div class="kpi-label">Kunden</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value" id="kpi-avg-order">-</div>
-                    <div class="kpi-label">Avg Order</div>
+                    <div class="kpi-label">Ø Bestellung</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <div class="kpi-card-compact">
                     <div class="kpi-value text-warning" id="kpi-margin">-</div>
-                    <div class="kpi-label">Margin</div>
+                    <div class="kpi-label">Marge</div>
                 </div>
             </div>
         </div>
@@ -111,7 +111,7 @@ Analytics Dashboard
             <div class="col-12 col-lg-8">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Revenue Trend</h6>
+                        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Umsatztrend</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-daily-trend" style="height: 300px;"></div>
@@ -121,7 +121,7 @@ Analytics Dashboard
             <div class="col-12 col-lg-4">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-shop"></i> Platform Share</h6>
+                        <h6 class="mb-0"><i class="bi bi-shop"></i> Plattformanteil</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-platform-revenue" style="height: 300px;"></div>
@@ -135,7 +135,7 @@ Analytics Dashboard
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-globe"></i> Countries</h6>
+                        <h6 class="mb-0"><i class="bi bi-globe"></i> Länder</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-geographic" style="height: 280px;"></div>
@@ -145,7 +145,7 @@ Analytics Dashboard
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-calendar3"></i> Day of Week</h6>
+                        <h6 class="mb-0"><i class="bi bi-calendar3"></i> Wochentag</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-day-of-week" style="height: 280px;"></div>
@@ -155,7 +155,7 @@ Analytics Dashboard
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-clock"></i> Hourly Pattern</h6>
+                        <h6 class="mb-0"><i class="bi bi-clock"></i> Stündliches Muster</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-hourly" style="height: 280px;"></div>
@@ -169,7 +169,7 @@ Analytics Dashboard
             <div class="col-12 col-lg-6">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Profitability</h6>
+                        <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Rentabilität</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-platform-profitability" style="height: 280px;"></div>
@@ -179,7 +179,7 @@ Analytics Dashboard
             <div class="col-12 col-lg-6">
                 <div class="card h-100">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-people"></i> Customer Segments</h6>
+                        <h6 class="mb-0"><i class="bi bi-people"></i> Kundensegmente</h6>
                     </div>
                     <div class="card-body p-2">
                         <div id="chart-customer-frequency" style="height: 280px;"></div>
@@ -193,17 +193,17 @@ Analytics Dashboard
             <div class="col-12">
                 <div class="card">
                     <div class="card-header py-2">
-                        <h6 class="mb-0"><i class="bi bi-trophy"></i> Top Customers</h6>
+                        <h6 class="mb-0"><i class="bi bi-trophy"></i> Top-Kunden</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-sm table-hover mb-0" id="customer-table">
                                 <thead>
                                     <tr>
-                                        <th>Customer</th>
-                                        <th class="text-end">Revenue</th>
-                                        <th class="text-end">Profit</th>
-                                        <th class="text-end">Orders</th>
+                                        <th>Kunde</th>
+                                        <th class="text-end">Umsatz</th>
+                                        <th class="text-end">Gewinn</th>
+                                        <th class="text-end">Bestellungen</th>
                                     </tr>
                                 </thead>
                                 <tbody id="customer-tbody"></tbody>
@@ -228,9 +228,9 @@ Analytics Dashboard
 {% block scripts %}
 <script>
     const COUNTRY_NAMES = {
-        'DE': 'Germany', 'AT': 'Austria', 'FR': 'France', 'CH': 'Switzerland',
-        'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands', 'BE': 'Belgium',
-        'PL': 'Poland', 'LU': 'Luxembourg', 'Unknown': 'Unknown'
+        'DE': 'Deutschland', 'AT': 'Österreich', 'FR': 'Frankreich', 'CH': 'Schweiz',
+        'IT': 'Italien', 'ES': 'Spanien', 'NL': 'Niederlande', 'BE': 'Belgien',
+        'PL': 'Polen', 'LU': 'Luxemburg', 'Unknown': 'Unbekannt'
     };
     
     document.getElementById('analytics-form').addEventListener('submit', async function(e) {
@@ -246,7 +246,7 @@ Analytics Dashboard
         
         const btn = document.getElementById('load-btn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Loading...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Wird geladen...';
         
         try {
             const response = await fetch('/api/analytics-data', {
@@ -269,19 +269,19 @@ Analytics Dashboard
                 renderCharts(result.charts);
                 updateTables(result.tables);
                 document.getElementById('analytics-content').style.display = 'block';
-                showToast('success', `Loaded ${result.record_count.toLocaleString()} records`);
+                showToast('success', `${result.record_count.toLocaleString()} Datensätze geladen`);
             } else {
                 document.getElementById('error-message').textContent = result.message;
                 document.getElementById('error-state').style.display = 'block';
             }
         } catch (error) {
             document.getElementById('loading-state').style.display = 'none';
-            document.getElementById('error-message').textContent = 'Network error: ' + error.message;
+            document.getElementById('error-message').textContent = 'Netzwerkfehler: ' + error.message;
             document.getElementById('error-state').style.display = 'block';
         }
         
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-graph-up"></i> Load Analytics';
+        btn.innerHTML = '<i class="bi bi-graph-up"></i> Analyse laden';
     }
     
     function updateKPIs(kpis) {

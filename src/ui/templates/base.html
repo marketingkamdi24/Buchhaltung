@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="de" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,14 +46,14 @@
             <li class="nav-item">
                 <a href="{{ url_for('process_page') }}" class="nav-link {% if page == 'process' %}active{% endif %}">
                     <i class="bi bi-gear-wide-connected"></i>
-                    <span>Process Data</span>
+                    <span>Datenverarbeitung</span>
                 </a>
             </li>
             
             <li class="nav-item">
                 <a href="{{ url_for('help_page') }}" class="nav-link {% if page == 'help' %}active{% endif %}">
                     <i class="bi bi-question-circle"></i>
-                    <span>Help</span>
+                    <span>Hilfe</span>
                 </a>
             </li>
         </ul>
@@ -61,7 +61,7 @@
         <div class="sidebar-footer">
             <a href="{{ url_for('logout') }}" class="nav-link logout-link" title="Logout">
                 <i class="bi bi-box-arrow-left"></i>
-                <span>Logout</span>
+                <span>Abmelden</span>
             </a>
             <button id="theme-toggle" class="theme-toggle" title="Toggle theme">
                 <i class="bi bi-moon-stars"></i>
@@ -84,7 +84,7 @@
             <div class="topbar-actions">
                 <div class="api-status" id="api-status">
                     <span class="status-dot" id="status-dot"></span>
-                    <span class="status-text" id="status-text">Checking...</span>
+                    <span class="status-text" id="status-text">Wird geprüft...</span>
                 </div>
             </div>
         </header>
@@ -105,17 +105,17 @@
             <div class="modal-content">
                 <div class="modal-header bg-warning">
                     <h5 class="modal-title" id="sessionTimeoutModalLabel">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Session Expiring Soon
+                        <i class="bi bi-exclamation-triangle me-2"></i>Sitzung läuft bald ab
                     </h5>
                 </div>
                 <div class="modal-body">
-                    <p>Your session will expire in <strong><span id="sessionCountdown">60</span> seconds</strong> due to inactivity.</p>
-                    <p>Click "Stay Logged In" to continue your session, or you will be automatically logged out.</p>
+                    <p>Ihre Sitzung läuft in <strong><span id="sessionCountdown">60</span> Sekunden</strong> wegen Inaktivität ab.</p>
+                    <p>Klicken Sie auf "Angemeldet bleiben" um Ihre Sitzung fortzusetzen, oder Sie werden automatisch abgemeldet.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="logoutNowBtn">Logout Now</button>
+                    <button type="button" class="btn btn-secondary" id="logoutNowBtn">Jetzt abmelden</button>
                     <button type="button" class="btn btn-primary" id="stayLoggedInBtn">
-                        <i class="bi bi-check-circle me-1"></i>Stay Logged In
+                        <i class="bi bi-check-circle me-1"></i>Angemeldet bleiben
                     </button>
                 </div>
             </div>
@@ -128,16 +128,16 @@
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="sessionExpiredModalLabel">
-                        <i class="bi bi-lock me-2"></i>Session Expired
+                        <i class="bi bi-lock me-2"></i>Sitzung abgelaufen
                     </h5>
                 </div>
                 <div class="modal-body">
-                    <p>Your session has expired due to inactivity.</p>
-                    <p>Please log in again to continue.</p>
+                    <p>Ihre Sitzung ist wegen Inaktivität abgelaufen.</p>
+                    <p>Bitte melden Sie sich erneut an um fortzufahren.</p>
                 </div>
                 <div class="modal-footer">
                     <a href="{{ url_for('login') }}" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right me-1"></i>Go to Login
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Zur Anmeldung
                     </a>
                 </div>
             </div>

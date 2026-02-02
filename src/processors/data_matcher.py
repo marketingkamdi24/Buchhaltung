@@ -22,6 +22,8 @@ class MatchResult:
     file_path: Optional[str] = None
     matched_file_path: Optional[str] = None
     processed_file_path: Optional[str] = None
+    matched_count: int = 0
+    unmatched_count: int = 0
 
 
 class DataMatcher:
@@ -125,7 +127,9 @@ class DataMatcher:
                     data=matched_df,
                     file_path=str(process_result.file_path),  # Main output is processed file
                     matched_file_path=str(matched_path),
-                    processed_file_path=str(process_result.file_path)
+                    processed_file_path=str(process_result.file_path),
+                    matched_count=match_count,
+                    unmatched_count=total_count - match_count
                 )
             else:
                 return MatchResult(

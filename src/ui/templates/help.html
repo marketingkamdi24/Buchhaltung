@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Help & Documentation{% endblock %}
+{% block title %}Hilfe & Dokumentation{% endblock %}
 
 {% block page_title %}
 <i class="bi bi-question-circle"></i>
-Help & Documentation
+Hilfe & Dokumentation
 {% endblock %}
 
 {% block content %}
@@ -14,31 +14,31 @@ Help & Documentation
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Quick Start Guide</h5>
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Schnellstart-Anleitung</h5>
                 </div>
                 <div class="card-body">
                     <div class="quick-start-steps">
                         <div class="qs-step">
                             <div class="qs-number">1</div>
                             <div class="qs-content">
-                                <h6>Fetch API Data</h6>
-                                <p>Enter your date range and select platforms (Amazon, eBay) to download transaction data from the API.</p>
+                                <h6>API-Daten abrufen</h6>
+                                <p>Geben Sie Ihren Datumsbereich ein und wählen Sie Plattformen (Amazon, eBay) aus, um Transaktionsdaten von der API herunterzuladen.</p>
                             </div>
                         </div>
                         <div class="qs-arrow"><i class="bi bi-arrow-right"></i></div>
                         <div class="qs-step">
                             <div class="qs-number">2</div>
                             <div class="qs-content">
-                                <h6>Upload Shop Export</h6>
-                                <p>Upload your eBay shop export Excel file. The system will match orders by ORDER_ID.</p>
+                                <h6>Shop-Export hochladen</h6>
+                                <p>Laden Sie Ihre eBay-Shop-Export-Excel-Datei hoch. Das System gleicht Bestellungen anhand der ORDER_ID ab.</p>
                             </div>
                         </div>
                         <div class="qs-arrow"><i class="bi bi-arrow-right"></i></div>
                         <div class="qs-step">
                             <div class="qs-number">3</div>
                             <div class="qs-content">
-                                <h6>Download Results</h6>
-                                <p>Download your processed file with matched KD-NR and RG-NR values filled in automatically.</p>
+                                <h6>Ergebnisse herunterladen</h6>
+                                <p>Laden Sie Ihre bearbeitete Datei herunter, in der KD-NR und RG-NR automatisch ausgefüllt wurden.</p>
                             </div>
                         </div>
                     </div>
@@ -50,25 +50,25 @@ Help & Documentation
         <div class="col-12 col-lg-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-cloud-download"></i> Step 1: Fetch API Data</h5>
+                    <h5 class="mb-0"><i class="bi bi-cloud-download"></i> Schritt 1: API-Daten abrufen</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Configuration Options</h6>
+                    <h6>Konfigurationsoptionen</h6>
                     <ul class="help-list">
                         <li>
-                            <strong>Date Range:</strong> Enter dates in DD.MM.YYYY format (e.g., 21.10.2025)
+                            <strong>Datumsbereich:</strong> Geben Sie Daten im Format TT.MM.JJJJ ein (z.B. 21.10.2025)
                         </li>
                         <li>
-                            <strong>Platforms:</strong> Toggle Amazon and/or eBay to fetch data from those platforms
+                            <strong>Plattformen:</strong> Wählen Sie Amazon und/oder eBay aus, um Daten von diesen Plattformen abzurufen
                         </li>
                         <li>
-                            <strong>Custom Origins:</strong> Add additional origin names if needed (comma-separated)
+                            <strong>Eigene Herkunft:</strong> Fügen Sie bei Bedarf weitere Herkunftsbezeichnungen hinzu (kommagetrennt)
                         </li>
                     </ul>
                     
                     <div class="alert alert-info small mt-3">
                         <i class="bi bi-info-circle me-2"></i>
-                        The API data includes ORDER_ID, KUNDENNR (KD-NR), and BELEGNR (RG-NR) for matching with your shop exports.
+                        Die API-Daten enthalten ORDER_ID, KUNDENNR (KD-NR) und BELEGNR (RG-NR) zum Abgleich mit Ihren Shop-Exporten.
                     </div>
                 </div>
             </div>
@@ -77,29 +77,29 @@ Help & Documentation
         <div class="col-12 col-lg-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> Step 2: Process Excel</h5>
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> Schritt 2: Excel verarbeiten</h5>
                 </div>
                 <div class="card-body">
-                    <h6>File Requirements</h6>
+                    <h6>Dateianforderungen</h6>
                     <ul class="help-list">
                         <li>
-                            <strong>Format:</strong> Excel files (.xlsx, .xls) or CSV
+                            <strong>Format:</strong> Excel-Dateien (.xlsx, .xls) oder CSV
                         </li>
                         <li>
-                            <strong>Structure:</strong> eBay shop export format with Bestellnummer in row 11
+                            <strong>Struktur:</strong> eBay-Shop-Export-Format mit Bestellnummer in Zeile 11
                         </li>
                         <li>
-                            <strong>Size:</strong> Up to 50MB supported
+                            <strong>Größe:</strong> Bis zu 50MB unterstützt
                         </li>
                     </ul>
                     
-                    <h6 class="mt-4">What Gets Processed</h6>
+                    <h6 class="mt-4">Was wird verarbeitet</h6>
                     <ul class="help-list">
-                        <li><i class="bi bi-check text-success me-2"></i>Match Bestellnummer → ORDER_ID</li>
-                        <li><i class="bi bi-check text-success me-2"></i>Fill KD-NR from KUNDENNR</li>
-                        <li><i class="bi bi-check text-success me-2"></i>Fill RG-NR from BELEGNR</li>
-                        <li><i class="bi bi-check text-success me-2"></i>Calculate fee sums</li>
-                        <li><i class="bi bi-check text-success me-2"></i>Separate "Andere Gebühr" entries</li>
+                        <li><i class="bi bi-check text-success me-2"></i>Bestellnummer → ORDER_ID abgleichen</li>
+                        <li><i class="bi bi-check text-success me-2"></i>KD-NR aus KUNDENNR ausfüllen</li>
+                        <li><i class="bi bi-check text-success me-2"></i>RG-NR aus BELEGNR ausfüllen</li>
+                        <li><i class="bi bi-check text-success me-2"></i>Gebührensummen berechnen</li>
+                        <li><i class="bi bi-check text-success me-2"></i>"Andere Gebühr"-Einträge separieren</li>
                     </ul>
                 </div>
             </div>
@@ -109,34 +109,34 @@ Help & Documentation
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Dashboard Analytics</h5>
+                    <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Dashboard-Analyse</h5>
                 </div>
                 <div class="card-body">
-                    <p>The Dashboard provides real-time analytics from your transaction data:</p>
+                    <p>Das Dashboard bietet Echtzeit-Analysen Ihrer Transaktionsdaten:</p>
                     
                     <div class="row g-3 mt-2">
                         <div class="col-6 col-md-3">
                             <div class="feature-box">
                                 <i class="bi bi-currency-euro text-primary"></i>
-                                <span>Revenue & Profit</span>
+                                <span>Umsatz & Gewinn</span>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="feature-box">
                                 <i class="bi bi-shop text-warning"></i>
-                                <span>Platform Analysis</span>
+                                <span>Plattformanalyse</span>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="feature-box">
                                 <i class="bi bi-globe text-info"></i>
-                                <span>Geographic Data</span>
+                                <span>Geografische Daten</span>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="feature-box">
                                 <i class="bi bi-people text-success"></i>
-                                <span>Customer Insights</span>
+                                <span>Kundeneinblicke</span>
                             </div>
                         </div>
                     </div>
@@ -148,34 +148,34 @@ Help & Documentation
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-wrench"></i> Troubleshooting</h5>
+                    <h5 class="mb-0"><i class="bi bi-wrench"></i> Fehlerbehebung</h5>
                 </div>
                 <div class="card-body">
                     <div class="accordion" id="troubleshootingAccordion">
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    No API Data message appears
+                                    Meldung "Keine API-Daten" erscheint
                                 </button>
                             </h2>
                             <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                 <div class="accordion-body">
-                                    Make sure to complete Step 1 (Fetch API Data) before uploading your Excel file. The API data is stored in your session and required for order matching.
+                                    Stellen Sie sicher, dass Sie Schritt 1 (API-Daten abrufen) abschließen, bevor Sie Ihre Excel-Datei hochladen. Die API-Daten werden in Ihrer Sitzung gespeichert und sind für den Bestellabgleich erforderlich.
                                 </div>
                             </div>
                         </div>
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    Orders not matching
+                                    Bestellungen werden nicht zugeordnet
                                 </button>
                             </h2>
                             <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                 <div class="accordion-body">
                                     <ul>
-                                        <li>Ensure the date range in Step 1 covers the dates of your shop export</li>
-                                        <li>Check that the correct platforms are selected</li>
-                                        <li>Verify your Excel file has the Bestellnummer column in the expected location (row 11)</li>
+                                        <li>Stellen Sie sicher, dass der Datumsbereich in Schritt 1 die Daten Ihres Shop-Exports abdeckt</li>
+                                        <li>Überprüfen Sie, ob die richtigen Plattformen ausgewählt sind</li>
+                                        <li>Stellen Sie sicher, dass Ihre Excel-Datei die Bestellnummer-Spalte an der erwarteten Stelle hat (Zeile 11)</li>
                                     </ul>
                                 </div>
                             </div>
@@ -183,15 +183,15 @@ Help & Documentation
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    File upload fails
+                                    Datei-Upload schlägt fehl
                                 </button>
                             </h2>
                             <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
                                 <div class="accordion-body">
                                     <ul>
-                                        <li>Ensure file is .xlsx, .xls, or .csv format</li>
-                                        <li>Maximum file size is 50MB</li>
-                                        <li>Check that the file is not corrupted or password-protected</li>
+                                        <li>Stellen Sie sicher, dass die Datei im Format .xlsx, .xls oder .csv vorliegt</li>
+                                        <li>Maximale Dateigröße ist 50MB</li>
+                                        <li>Überprüfen Sie, ob die Datei nicht beschädigt oder passwortgeschützt ist</li>
                                     </ul>
                                 </div>
                             </div>

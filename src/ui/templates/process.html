@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Process Data{% endblock %}
+{% block title %}Daten verarbeiten{% endblock %}
 
 {% block page_title %}
 <i class="bi bi-gear-wide-connected"></i>
-Data Processing
+Datenverarbeitung
 {% endblock %}
 
 {% block content %}
@@ -16,7 +16,7 @@ Data Processing
                 <div class="step-circle">
                     <i class="bi bi-cloud-download"></i>
                 </div>
-                <span class="step-label">Fetch API Data</span>
+                <span class="step-label">API-Daten abrufen</span>
             </div>
             <div class="progress-connector">
                 <div class="connector-line" id="connector-1"></div>
@@ -25,7 +25,7 @@ Data Processing
                 <div class="step-circle">
                     <i class="bi bi-file-earmark-spreadsheet"></i>
                 </div>
-                <span class="step-label">Process Excel</span>
+                <span class="step-label">Excel verarbeiten</span>
             </div>
             <div class="progress-connector">
                 <div class="connector-line" id="connector-2"></div>
@@ -34,7 +34,7 @@ Data Processing
                 <div class="step-circle">
                     <i class="bi bi-check-lg"></i>
                 </div>
-                <span class="step-label">Download</span>
+                <span class="step-label">Herunterladen</span>
             </div>
         </div>
     </div>
@@ -50,33 +50,33 @@ Data Processing
                             <i class="bi bi-cloud-download"></i>
                         </div>
                         <div>
-                            <h4>Fetch Transaction Data</h4>
-                            <p class="text-muted mb-0">Download transaction data from eBay and Amazon APIs</p>
+                            <h4>Transaktionsdaten abrufen</h4>
+                            <p class="text-muted mb-0">Transaktionsdaten von eBay und Amazon APIs herunterladen</p>
                         </div>
                     </div>
                     
                     <form id="fetch-form" class="mt-4">
                         <!-- Quick Date Selection -->
                         <div class="quick-dates mb-4">
-                            <label class="form-label fw-medium">Date Range</label>
+                            <label class="form-label fw-medium">Zeitraum</label>
                             <div class="date-input-group">
                                 <div class="input-with-icon">
                                     <i class="bi bi-calendar3"></i>
                                     <input type="text" class="form-control" id="date_from" 
-                                           placeholder="From: DD.MM.YYYY" value="21.10.2025">
+                                           placeholder="Von: TT.MM.JJJJ" value="21.10.2025">
                                 </div>
-                                <span class="date-separator">to</span>
+                                <span class="date-separator">bis</span>
                                 <div class="input-with-icon">
                                     <i class="bi bi-calendar3"></i>
                                     <input type="text" class="form-control" id="date_to" 
-                                           placeholder="To: DD.MM.YYYY" value="28.10.2025">
+                                           placeholder="Bis: TT.MM.JJJJ" value="28.10.2025">
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Platform Toggle -->
                         <div class="platform-selection mb-4">
-                            <label class="form-label fw-medium">Platforms</label>
+                            <label class="form-label fw-medium">Plattformen</label>
                             <div class="platform-toggles">
                                 <label class="platform-toggle amazon">
                                     <input type="checkbox" id="use_amazon" checked>
@@ -98,7 +98,7 @@ Data Processing
                         <!-- Optional: Custom Origins (collapsed by default) -->
                         <details class="custom-origins-section mb-4">
                             <summary class="text-muted small">
-                                <i class="bi bi-plus-circle me-1"></i>Add custom origins
+                                <i class="bi bi-plus-circle me-1"></i>Benutzerdefinierte Herkunft hinzufügen
                             </summary>
                             <div class="mt-2">
                                 <input type="text" class="form-control form-control-sm" 
@@ -108,7 +108,7 @@ Data Processing
                         
                         <!-- Fetch Button -->
                         <button type="submit" class="btn btn-primary btn-lg w-100" id="fetch-btn">
-                            <i class="bi bi-cloud-download me-2"></i>Fetch Data
+                            <i class="bi bi-cloud-download me-2"></i>Daten abrufen
                         </button>
                     </form>
                     
@@ -119,13 +119,13 @@ Data Processing
                                 <i class="bi bi-check-circle-fill"></i>
                             </div>
                             <div class="result-info">
-                                <h5>Data Retrieved Successfully</h5>
+                                <h5>Daten erfolgreich abgerufen</h5>
                                 <p class="mb-0">
-                                    <span id="fetch-count" class="fw-bold text-primary">0</span> records loaded
+                                    <span id="fetch-count" class="fw-bold text-primary">0</span> Datensätze geladen
                                 </p>
                             </div>
                             <button type="button" class="btn btn-success" id="continue-to-step-2">
-                                Continue <i class="bi bi-arrow-right ms-1"></i>
+                                Weiter <i class="bi bi-arrow-right ms-1"></i>
                             </button>
                         </div>
                         
@@ -141,14 +141,14 @@ Data Processing
                                         id="data-preview-toggle">
                                     <span>
                                         <i class="bi bi-table me-2"></i>
-                                        View Fetched Data
+                                        Abgerufene Daten anzeigen
                                     </span>
                                     <span class="d-flex align-items-center">
                                         <span class="badge bg-secondary me-2" id="preview-row-badge">0 rows</span>
                                         <i class="bi bi-chevron-down" id="preview-toggle-icon"></i>
                                     </span>
                                 </button>
-                                <a href="#" class="btn btn-outline-success btn-sm" id="download-api-data" style="display: none;" title="Download API Data">
+                                <a href="#" class="btn btn-outline-success btn-sm" id="download-api-data" style="display: none;" title="API-Daten herunterladen" download>
                                     <i class="bi bi-download me-1"></i>Excel
                                 </a>
                             </div>
@@ -185,15 +185,15 @@ Data Processing
                             <i class="bi bi-file-earmark-spreadsheet"></i>
                         </div>
                         <div>
-                            <h4>Process Shop Export</h4>
-                            <p class="text-muted mb-0">Upload your eBay shop export and match with API data</p>
+                            <h4>Shop-Export verarbeiten</h4>
+                            <p class="text-muted mb-0">eBay Shop-Export hochladen und mit API-Daten abgleichen</p>
                         </div>
                     </div>
                     
                     <!-- API Data Status Badge -->
                     <div class="api-data-badge mt-4" id="api-data-badge">
                         <i class="bi bi-database-check"></i>
-                        <span><span id="api-record-count">0</span> API records ready for matching</span>
+                        <span><span id="api-record-count">0</span> API-Datensätze bereit zum Abgleich</span>
                     </div>
                     
                     <!-- File Upload -->
@@ -203,8 +203,8 @@ Data Processing
                             <div class="upload-icon-wrapper">
                                 <i class="bi bi-cloud-upload"></i>
                             </div>
-                            <h5>Drop your Excel file here</h5>
-                            <p class="text-muted">or click to browse</p>
+                            <h5>Excel-Datei hier ablegen</h5>
+                            <p class="text-muted">oder klicken zum Durchsuchen</p>
                             <span class="file-types">.xlsx, .xls, .csv</span>
                         </div>
                         <div class="upload-file-selected" id="upload-selected" style="display: none;">
@@ -223,18 +223,18 @@ Data Processing
                     
                     <!-- Process Button -->
                     <button type="button" class="btn btn-success btn-lg w-100 mt-4" id="process-btn" disabled>
-                        <i class="bi bi-gear me-2"></i>Match & Process
+                        <i class="bi bi-gear me-2"></i>Abgleichen & Verarbeiten
                     </button>
                     
                     <!-- Processing Indicator -->
                     <div id="processing-indicator" class="text-center py-4" style="display: none;">
                         <div class="spinner-border text-success mb-2"></div>
-                        <p class="text-muted mb-0">Processing your file...</p>
+                        <p class="text-muted mb-0">Datei wird verarbeitet...</p>
                     </div>
                     
                     <!-- Back button -->
                     <button type="button" class="btn btn-link text-muted mt-3" id="back-to-step-1">
-                        <i class="bi bi-arrow-left me-1"></i>Back to Step 1
+                        <i class="bi bi-arrow-left me-1"></i>Zurück zu Schritt 1
                     </button>
                 </div>
             </div>
@@ -249,8 +249,8 @@ Data Processing
                             <i class="bi bi-check-lg"></i>
                         </div>
                         <div>
-                            <h4>Processing Complete!</h4>
-                            <p class="text-muted mb-0">Your files are ready for download</p>
+                            <h4>Verarbeitung abgeschlossen!</h4>
+                            <p class="text-muted mb-0">Ihre Dateien stehen zum Download bereit</p>
                         </div>
                     </div>
                     
@@ -258,32 +258,32 @@ Data Processing
                     <div class="results-summary mt-4">
                         <div class="result-stat-card">
                             <div class="stat-value text-success" id="result-matched">0</div>
-                            <div class="stat-label">Matched</div>
+                            <div class="stat-label">Zugeordnet</div>
                         </div>
                         <div class="result-stat-card">
                             <div class="stat-value text-warning" id="result-unmatched">0</div>
-                            <div class="stat-label">Unmatched</div>
+                            <div class="stat-label">Nicht zugeordnet</div>
                         </div>
                         <div class="result-stat-card">
                             <div class="stat-value text-primary" id="result-total">0</div>
-                            <div class="stat-label">Total</div>
+                            <div class="stat-label">Gesamt</div>
                         </div>
                     </div>
                     
                     <!-- Download Buttons -->
                     <div class="download-actions mt-4">
-                        <a href="#" class="btn btn-primary btn-lg" id="download-modified">
-                            <i class="bi bi-download me-2"></i>Download Processed File
+                        <a href="#" class="btn btn-primary btn-lg" id="download-modified" download>
+                            <i class="bi bi-download me-2"></i>Bearbeitete Datei herunterladen
                         </a>
-                        <a href="#" class="btn btn-outline-secondary" id="download-matched">
-                            <i class="bi bi-download me-2"></i>Download Matched Only
+                        <a href="#" class="btn btn-outline-secondary" id="download-matched" download>
+                            <i class="bi bi-download me-2"></i>Nur zugeordnete Daten herunterladen
                         </a>
                     </div>
                     
                     <!-- Process Another -->
                     <div class="text-center mt-4">
                         <button type="button" class="btn btn-link" id="process-another">
-                            <i class="bi bi-arrow-repeat me-1"></i>Process Another File
+                            <i class="bi bi-arrow-repeat me-1"></i>Weitere Datei verarbeiten
                         </button>
                     </div>
                 </div>
@@ -371,7 +371,7 @@ Data Processing
     
     function handleFile(file) {
         if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-            showToast('error', 'Please upload an Excel or CSV file');
+            showToast('error', 'Bitte laden Sie eine Excel- oder CSV-Datei hoch');
             return;
         }
         
@@ -456,7 +456,7 @@ Data Processing
         
         const btn = document.getElementById('fetch-btn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Fetching...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird abgerufen...';
         
         document.getElementById('fetch-result').style.display = 'none';
         document.getElementById('fetch-error').style.display = 'none';
@@ -489,7 +489,7 @@ Data Processing
                 // Build and show the preview table
                 buildPreviewTable(fetchedColumns, fetchedPreview);
                 document.getElementById('preview-row-badge').textContent =
-                    fetchedPreview.length + ' of ' + apiRecordCount.toLocaleString() + ' rows';
+                    fetchedPreview.length + ' von ' + apiRecordCount.toLocaleString() + ' Zeilen';
                 
                 // Show and set download link for API data
                 if (data.download_url) {
@@ -499,20 +499,20 @@ Data Processing
                 }
                 
                 updateStepIndicator(1, 'completed');
-                showToast('success', `Fetched ${data.record_count} records`);
+                showToast('success', `${data.record_count} Datensätze abgerufen`);
             } else {
                 document.getElementById('fetch-error-msg').textContent = data.message;
                 document.getElementById('fetch-error').style.display = 'block';
                 showToast('error', data.message);
             }
         } catch (error) {
-            document.getElementById('fetch-error-msg').textContent = 'Network error: ' + error.message;
+            document.getElementById('fetch-error-msg').textContent = 'Netzwerkfehler: ' + error.message;
             document.getElementById('fetch-error').style.display = 'block';
-            showToast('error', 'Failed to fetch data');
+            showToast('error', 'Fehler beim Abrufen der Daten');
         }
         
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-cloud-download me-2"></i>Fetch Data';
+        btn.innerHTML = '<i class="bi bi-cloud-download me-2"></i>Daten abrufen';
         updateProcessButton();
     });
     
@@ -522,7 +522,7 @@ Data Processing
         
         const btn = this;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird verarbeitet...';
         document.getElementById('processing-indicator').style.display = 'block';
         
         const formData = new FormData();
@@ -552,16 +552,16 @@ Data Processing
                 
                 updateStepIndicator(2, 'completed');
                 goToStep(3);
-                showToast('success', `Processed ${data.total_count} records`);
+                showToast('success', `${data.total_count} Datensätze verarbeitet`);
             } else {
                 showToast('error', data.message);
             }
         } catch (error) {
-            showToast('error', 'Failed to process data: ' + error.message);
+            showToast('error', 'Fehler bei der Verarbeitung: ' + error.message);
         }
         
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-gear me-2"></i>Match & Process';
+        btn.innerHTML = '<i class="bi bi-gear me-2"></i>Abgleichen & Verarbeiten';
         document.getElementById('processing-indicator').style.display = 'none';
         updateProcessButton();
     });
@@ -573,7 +573,7 @@ Data Processing
         
         if (!columns || columns.length === 0) {
             thead.innerHTML = '';
-            tbody.innerHTML = '<tr><td class="text-muted text-center py-3">No data available</td></tr>';
+            tbody.innerHTML = '<tr><td class="text-muted text-center py-3">Keine Daten verfügbar</td></tr>';
             return;
         }
         
