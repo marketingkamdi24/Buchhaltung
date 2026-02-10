@@ -4,7 +4,7 @@
 
 {% block page_title %}
 <i class="bi bi-gear-wide-connected"></i>
-Datenverarbeitung
+eBay Datenverarbeitung
 {% endblock %}
 
 {% block content %}
@@ -51,7 +51,7 @@ Datenverarbeitung
                         </div>
                         <div>
                             <h4>Transaktionsdaten abrufen</h4>
-                            <p class="text-muted mb-0">Transaktionsdaten von eBay und Amazon APIs herunterladen</p>
+                            <p class="text-muted mb-0">Transaktionsdaten von eBay API herunterladen</p>
                         </div>
                     </div>
                     
@@ -74,26 +74,9 @@ Datenverarbeitung
                             </div>
                         </div>
                         
-                        <!-- Platform Toggle -->
-                        <div class="platform-selection mb-4">
-                            <label class="form-label fw-medium">Plattformen</label>
-                            <div class="platform-toggles">
-                                <label class="platform-toggle amazon">
-                                    <input type="checkbox" id="use_amazon" checked>
-                                    <span class="toggle-content">
-                                        <i class="bi bi-box-fill"></i>
-                                        <span>Amazon</span>
-                                    </span>
-                                </label>
-                                <label class="platform-toggle ebay">
-                                    <input type="checkbox" id="use_ebay" checked>
-                                    <span class="toggle-content">
-                                        <i class="bi bi-bag-fill"></i>
-                                        <span>eBay</span>
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
+                        <!-- eBay Platform (hidden input for compatibility) -->
+                        <input type="hidden" id="use_amazon" value="false">
+                        <input type="hidden" id="use_ebay" value="true">
                         
                         <!-- Optional: Custom Origins (collapsed by default) -->
                         <details class="custom-origins-section mb-4">
@@ -185,8 +168,8 @@ Datenverarbeitung
                             <i class="bi bi-file-earmark-spreadsheet"></i>
                         </div>
                         <div>
-                            <h4>Shop-Export verarbeiten</h4>
-                            <p class="text-muted mb-0">eBay Shop-Export hochladen und mit API-Daten abgleichen</p>
+                            <h4>eBay Shop-Export verarbeiten</h4>
+                            <p class="text-muted mb-0">eBay Shop-Export hochladen und mit eBay API-Daten abgleichen</p>
                         </div>
                     </div>
                     
@@ -468,8 +451,8 @@ Datenverarbeitung
                 body: JSON.stringify({
                     date_from: document.getElementById('date_from').value,
                     date_to: document.getElementById('date_to').value,
-                    use_amazon: document.getElementById('use_amazon').checked,
-                    use_ebay: document.getElementById('use_ebay').checked,
+                    use_amazon: false,
+                    use_ebay: true,
                     custom_origins: document.getElementById('custom_origins').value
                 })
             });

@@ -355,6 +355,13 @@ def process_page():
     return render_template('process.html', page='process', has_api_data=has_api_data)
 
 
+@app.route('/amazon')
+@login_required
+def amazon_page():
+    """Amazon Data Processing page."""
+    return render_template('amazon.html', page='amazon')
+
+
 @app.route('/help')
 @login_required
 def help_page():
@@ -698,6 +705,294 @@ def check_api_data():
         'date_from': date_from,
         'date_to': date_to
     })
+
+
+# ============================================================================
+# Amazon Processing API Endpoints
+# ============================================================================
+
+@app.route('/api/amazon/process-csv', methods=['POST'])
+@login_required
+def api_amazon_process_csv():
+    """Process uploaded Amazon CSV file."""
+    try:
+        if 'csv_file' not in request.files:
+            return jsonify({'success': False, 'message': 'Keine CSV-Datei hochgeladen'})
+        
+        file = request.files['csv_file']
+        abrechnungsnummer = request.form.get('abrechnungsnummer', '').strip()
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Keine Datei ausgewählt'})
+        
+        if not abrechnungsnummer:
+            return jsonify({'success': False, 'message': 'Abrechnungsnummer fehlt'})
+        
+        # Read CSV file, skip first 7 rows (row 8 is header)
+        import io
+        content = file.read().decode('utf-8')
+        df = pd.read_csv(io.StringIO(content), sep=';', skiprows=7, decimal=',')
+        
+        # Clean column names
+        df.columns = df.columns.str.strip()
+        
+        # Filter by Abrechnungsnummer and Typ = Versanddienstleistungen
+        filtered_df = df[
+            (df['Abrechnungsnummer'].astype(str) == str(abrechnungsnummer)) &
+            (df['Typ'] == 'Versanddienstleistungen')
+        ].copy()
+        
+        if filtered_df.empty:
+            return jsonify({
+                'success': False, 
+                'message': f'Keine Versanddienstleistungen für Abrechnungsnummer {abrechnungsnummer} gefunden'
+            })
+        
+        # Calculate sum of Gesamt column
+        filtered_df['Gesamt'] = pd.to_numeric(filtered_df['Gesamt'].astype(str).str.replace(',', '.'), errors='coerce')
+        gesamt_sum = filtered_df['Gesamt'].sum()
+        
+        # Convert to records for JSON
+        columns = list(filtered_df.columns)
+        filtered_data = filtered_df.fillna('').to_dict('records')
+        
+        # Store in session for later use
+        session['amazon_csv_data'] = filtered_data
+        session['amazon_abrechnungsnummer'] = abrechnungsnummer
+        
+        return jsonify({
+            'success': True,
+            'message': 'CSV erfolgreich verarbeitet',
+            'row_count': len(filtered_df),
+            'gesamt_sum': gesamt_sum,
+            'abrechnungsnummer': abrechnungsnummer,
+            'columns': columns,
+            'filtered_data': filtered_data,
+            'all_data': filtered_data
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'message': f'Fehler: {str(e)}\n{traceback.format_exc()}'
+        })
+
+
+@app.route('/api/amazon/fetch-api-data', methods=['POST'])
+@login_required
+def api_amazon_fetch_api_data():
+    """Fetch API data for each Bestellnummer and stream progress."""
+    import requests as req
+    
+    # Capture request data BEFORE entering the generator (to avoid context issues)
+    data = request.json
+    abrechnungsnummer = data.get('abrechnungsnummer', '')
+    bestellnummern = data.get('bestellnummern', [])
+    csv_data = session.get('amazon_csv_data', [])
+    
+    # Remove duplicates while preserving order
+    unique_bestellnummern = list(dict.fromkeys(bestellnummern))
+    
+    def generate():
+        try:
+            yield f"data: {json.dumps({'type': 'init', 'total': len(unique_bestellnummern)})}\n\n"
+            
+            api_results = []
+            api_errors = []  # Track API errors
+            orders_no_data = []  # Track orders with no matching data
+            
+            # API configuration
+            api_url = "http://81.201.149.54:23100/procedures/IDM_APP_Amazon"
+            headers = {
+                "Piper-Connection": "c9a182ab-97bf-456e-a0eb-606bf97090d5",
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }
+            
+            for idx, order_id in enumerate(unique_bestellnummern):
+                yield f"data: {json.dumps({'type': 'progress', 'current': idx + 1, 'order_id': order_id})}\n\n"
+                
+                try:
+                    body = {
+                        "Parameters": {
+                            "iorder_id": str(order_id)
+                        }
+                    }
+                    
+                    response = req.get(api_url, headers=headers, json=body, timeout=30)
+                    
+                    if response.status_code == 200:
+                        api_data = response.json()
+                        
+                        # Parse the response - look for entries
+                        entries = []
+                        if isinstance(api_data, dict):
+                            if 'Entries' in api_data:
+                                entries = api_data['Entries'] if isinstance(api_data['Entries'], list) else [api_data['Entries']]
+                            elif 'data' in api_data:
+                                entries = api_data['data'] if isinstance(api_data['data'], list) else [api_data['data']]
+                            else:
+                                entries = [api_data]
+                        elif isinstance(api_data, list):
+                            entries = api_data
+                        
+                        # Filter by TYP=Versanddienstleistun only (ABRECHNUNGSNR may differ)
+                        found_match = False
+                        for entry in entries:
+                            if isinstance(entry, dict):
+                                typ = str(entry.get('TYP', '')).strip()
+                                
+                                if typ == 'Versanddienstleistun':
+                                    api_results.append(entry)
+                                    found_match = True
+                        
+                        if not found_match:
+                            # Count how many times this order appears in CSV
+                            csv_count = len([r for r in csv_data if str(r.get('Bestellnummer', '')) == order_id])
+                            orders_no_data.append({
+                                'order_id': order_id,
+                                'reason': 'Kein Eintrag mit TYP=Versanddienstleistun',
+                                'entries_count': len(entries),
+                                'csv_count': csv_count,
+                                'api_entries': entries  # Include actual API entries for display
+                            })
+                    else:
+                        api_errors.append({
+                            'order_id': order_id,
+                            'error': f'HTTP {response.status_code}'
+                        })
+                                    
+                except Exception as e:
+                    api_errors.append({
+                        'order_id': order_id,
+                        'error': str(e)
+                    })
+                    continue
+            
+            # Find ALL duplicates in CSV - any Bestellnummer that appears more than once
+            # Group CSV rows by Bestellnummer
+            duplicates = []
+            csv_duplicates_list = []  # All duplicate CSV rows for display
+            bestellnummer_counts_csv = {}
+            for idx, row in enumerate(csv_data):
+                bn = str(row.get('Bestellnummer', ''))
+                row_with_index = dict(row)
+                row_with_index['_csv_row_index'] = idx
+                if bn in bestellnummer_counts_csv:
+                    bestellnummer_counts_csv[bn].append(row_with_index)
+                else:
+                    bestellnummer_counts_csv[bn] = [row_with_index]
+            
+            # Identify all CSV duplicates (any row where Bestellnummer appears > 1 time)
+            for bn, csv_rows in bestellnummer_counts_csv.items():
+                if len(csv_rows) > 1:
+                    for row in csv_rows:
+                        csv_duplicates_list.append({
+                            'bestellnummer': bn,
+                            'count_in_csv': len(csv_rows),
+                            'row': row
+                        })
+            
+            # Group API rows by ORDER_ID
+            bestellnummer_counts_api = {}
+            for row in api_results:
+                bn = str(row.get('ORDER_ID', row.get('BESTELLNUMMER', '')))
+                if bn in bestellnummer_counts_api:
+                    bestellnummer_counts_api[bn].append(row)
+                else:
+                    bestellnummer_counts_api[bn] = [row]
+            
+            # For each Bestellnummer: if CSV has more rows, duplicate the API row
+            # to match CSV count, and track these as duplicates
+            api_results_with_duplicates = list(api_results)  # Start with original results
+            
+            for bn, csv_rows in bestellnummer_counts_csv.items():
+                api_rows = bestellnummer_counts_api.get(bn, [])
+                csv_count = len(csv_rows)
+                api_count = len(api_rows)
+                
+                if csv_count > api_count and api_rows:
+                    # Need to duplicate the API row to match CSV count
+                    duplicates_needed = csv_count - api_count
+                    for i in range(duplicates_needed):
+                        # Create a copy of the first API row and mark as duplicate
+                        dup_row = dict(api_rows[0])
+                        dup_row['_is_duplicate'] = True
+                        api_results_with_duplicates.append(dup_row)
+                        duplicates.append({
+                            'bestellnummer': bn,
+                            'csv_row': csv_rows[api_count + i],
+                            'api_row': api_rows[0],
+                            'reason': f'CSV hat {csv_count} Zeilen, API hat {api_count}'
+                        })
+            
+            # Calculate API sum INCLUDING duplicated rows
+            api_sum = sum(float(row.get('GESAMT', 0)) for row in api_results_with_duplicates)
+            
+            yield f"data: {json.dumps({'type': 'complete', 'api_data': api_results_with_duplicates, 'duplicates': duplicates, 'csv_duplicates': csv_duplicates_list, 'api_sum': api_sum, 'api_errors': api_errors, 'orders_no_data': orders_no_data, 'stats': {'total_orders': len(unique_bestellnummern), 'api_matches': len(api_results), 'api_with_dups': len(api_results_with_duplicates), 'errors': len(api_errors), 'no_data': len(orders_no_data), 'csv_duplicate_rows': len(csv_duplicates_list)}})}\n\n"
+            
+        except Exception as e:
+            import traceback
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return app.response_class(generate(), mimetype='text/event-stream')
+
+
+@app.route('/api/amazon/download-results', methods=['POST'])
+@login_required
+def api_amazon_download_results():
+    """Download Amazon comparison results as Excel."""
+    try:
+        data = request.json
+        csv_data = data.get('csv_data', [])
+        api_data = data.get('api_data', [])
+        duplicates = data.get('duplicates', [])
+        abrechnungsnummer = data.get('abrechnungsnummer', '')
+        
+        # Create Excel file with multiple sheets
+        config = get_config()
+        output_filename = f"amazon_vergleich_{abrechnungsnummer}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        output_path = config.app.output_dir / output_filename
+        
+        with pd.ExcelWriter(str(output_path), engine='openpyxl') as writer:
+            # CSV Data sheet
+            if csv_data:
+                df_csv = pd.DataFrame(csv_data)
+                # Add sum row
+                if 'Gesamt' in df_csv.columns:
+                    sum_row = {col: '' for col in df_csv.columns}
+                    sum_row[df_csv.columns[0]] = 'SUMME'
+                    sum_row['Gesamt'] = df_csv['Gesamt'].astype(float).sum()
+                    df_csv = pd.concat([df_csv, pd.DataFrame([sum_row])], ignore_index=True)
+                df_csv.to_excel(writer, sheet_name='CSV_Daten', index=False)
+            
+            # API Data sheet
+            if api_data:
+                df_api = pd.DataFrame(api_data)
+                # Add sum row
+                if 'GESAMT' in df_api.columns:
+                    sum_row = {col: '' for col in df_api.columns}
+                    sum_row[df_api.columns[0]] = 'SUMME'
+                    sum_row['GESAMT'] = df_api['GESAMT'].astype(float).sum()
+                    df_api = pd.concat([df_api, pd.DataFrame([sum_row])], ignore_index=True)
+                df_api.to_excel(writer, sheet_name='API_Daten', index=False)
+            
+            # Duplicates sheet
+            if duplicates:
+                dup_rows = [d['csv_row'] for d in duplicates if d.get('csv_row')]
+                if dup_rows:
+                    df_dup = pd.DataFrame(dup_rows)
+                    df_dup.to_excel(writer, sheet_name='Duplikate', index=False)
+        
+        return send_file(str(output_path), as_attachment=True, download_name=output_filename)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'message': f'Fehler: {str(e)}\n{traceback.format_exc()}'
+        }), 500
 
 
 def create_app():

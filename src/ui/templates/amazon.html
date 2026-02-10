@@ -1,0 +1,1050 @@
+{% extends "base.html" %}
+
+{% block title %}Amazon Datenverarbeitung{% endblock %}
+
+{% block page_title %}
+<i class="bi bi-box-seam"></i>
+Amazon Datenverarbeitung
+{% endblock %}
+
+{% block content %}
+<div class="process-wizard">
+    <!-- Progress Header -->
+    <div class="wizard-progress mb-4">
+        <div class="progress-track">
+            <div class="progress-step active" data-step="1">
+                <div class="step-circle">
+                    <i class="bi bi-upload"></i>
+                </div>
+                <span class="step-label">CSV hochladen</span>
+            </div>
+            <div class="progress-connector">
+                <div class="connector-line" id="connector-1"></div>
+            </div>
+            <div class="progress-step" data-step="2" id="step-2-indicator">
+                <div class="step-circle">
+                    <i class="bi bi-funnel"></i>
+                </div>
+                <span class="step-label">Filtern & Verarbeiten</span>
+            </div>
+            <div class="progress-connector">
+                <div class="connector-line" id="connector-2"></div>
+            </div>
+            <div class="progress-step" data-step="3" id="step-3-indicator">
+                <div class="step-circle">
+                    <i class="bi bi-cloud-download"></i>
+                </div>
+                <span class="step-label">API Abgleich</span>
+            </div>
+            <div class="progress-connector">
+                <div class="connector-line" id="connector-3"></div>
+            </div>
+            <div class="progress-step" data-step="4" id="step-4-indicator">
+                <div class="step-circle">
+                    <i class="bi bi-check-lg"></i>
+                </div>
+                <span class="step-label">Ergebnis</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="wizard-content">
+        <!-- Step 1: Upload CSV and Enter Abrechnungsnummer -->
+        <div class="wizard-step active" id="step-1">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-upload"></i>
+                        </div>
+                        <div>
+                            <h4>Amazon CSV hochladen</h4>
+                            <p class="text-muted mb-0">CSV-Datei und Abrechnungsnummer eingeben</p>
+                        </div>
+                    </div>
+                    
+                    <form id="amazon-upload-form" class="mt-4">
+                        <!-- Abrechnungsnummer Input -->
+                        <div class="mb-4">
+                            <label for="abrechnungsnummer" class="form-label fw-medium">
+                                <i class="bi bi-hash me-1"></i>Abrechnungsnummer
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="abrechnungsnummer" 
+                                   placeholder="z.B. 25965563842" required>
+                            <div class="form-text">Die Abrechnungsnummer für die Filterung der Daten</div>
+                        </div>
+                        
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label for="amazon-csv-file" class="form-label fw-medium">
+                                <i class="bi bi-file-earmark-csv me-1"></i>Amazon CSV Datei
+                            </label>
+                            <div class="upload-zone" id="amazon-upload-zone">
+                                <input type="file" class="form-control" id="amazon-csv-file" 
+                                       accept=".csv" style="display: none;">
+                                <div class="upload-content">
+                                    <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                                    <p class="upload-text">CSV-Datei hierher ziehen oder <span class="text-primary">durchsuchen</span></p>
+                                    <p class="upload-hint text-muted small">Nur .csv Dateien werden akzeptiert</p>
+                                </div>
+                                <div class="file-selected" style="display: none;">
+                                    <i class="bi bi-file-earmark-check text-success"></i>
+                                    <span class="file-name"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Process Button -->
+                        <button type="submit" class="btn btn-warning btn-lg w-100" id="process-csv-btn" disabled>
+                            <i class="bi bi-gear me-2"></i>CSV verarbeiten
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: CSV Processing Result -->
+        <div class="wizard-step" id="step-2" style="display: none;">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-info-subtle text-info">
+                            <i class="bi bi-funnel"></i>
+                        </div>
+                        <div>
+                            <h4>CSV Verarbeitungsergebnis</h4>
+                            <p class="text-muted mb-0">Gefilterte Versanddienstleistungen</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Stats -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light">
+                                <div class="stat-icon text-primary">
+                                    <i class="bi bi-list-ol"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="csv-row-count">0</span>
+                                    <span class="stat-label">Zeilen gefunden</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light">
+                                <div class="stat-icon text-success">
+                                    <i class="bi bi-currency-euro"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="csv-gesamt-sum">0,00</span>
+                                    <span class="stat-label">Gesamt Summe</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light">
+                                <div class="stat-icon text-warning">
+                                    <i class="bi bi-hash"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="csv-abrechnungsnr">-</span>
+                                    <span class="stat-label">Abrechnungsnummer</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CSV Data Table -->
+                    <div class="mt-4">
+                        <h5><i class="bi bi-table me-2"></i>CSV Daten (Versanddienstleistungen)</h5>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-striped table-hover" id="csv-result-table">
+                                <thead class="table-light sticky-top"></thead>
+                                <tbody></tbody>
+                                <tfoot class="table-dark"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary btn-lg" id="back-to-step1-btn">
+                            <i class="bi bi-arrow-left me-2"></i>Zurück
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg flex-grow-1" id="fetch-api-btn">
+                            <i class="bi bi-cloud-download me-2"></i>API-Daten abrufen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: API Data Fetch -->
+        <div class="wizard-step" id="step-3" style="display: none;">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-cloud-download"></i>
+                        </div>
+                        <div>
+                            <h4>API-Daten abrufen</h4>
+                            <p class="text-muted mb-0">Daten für jede Bestellnummer werden abgerufen</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress -->
+                    <div class="mt-4" id="api-fetch-progress">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Fortschritt</span>
+                            <span id="api-progress-text">0 / 0</span>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" id="api-progress-bar"></div>
+                        </div>
+                        <div class="mt-2 text-muted small" id="api-current-order">
+                            Wird gestartet...
+                        </div>
+                    </div>
+                    
+                    <!-- API Result Summary (hidden initially) -->
+                    <div id="api-result-summary" style="display: none;">
+                        <!-- Detailed Stats Row -->
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-info">
+                                        <i class="bi bi-send"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="api-total-orders">0</span>
+                                        <span class="stat-label">Bestellungen abgefragt</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-primary">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="api-matches">0</span>
+                                        <span class="stat-label">API Treffer</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-success">
+                                        <i class="bi bi-list-ol"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="api-row-count">0</span>
+                                        <span class="stat-label">API Zeilen (inkl. Dups)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-success">
+                                        <i class="bi bi-currency-euro"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="api-gesamt-sum">0,00</span>
+                                        <span class="stat-label">API Gesamt Summe</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-warning">
+                                        <i class="bi bi-files"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="csv-duplicate-count">0</span>
+                                        <span class="stat-label">CSV Duplikate</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card bg-light">
+                                    <div class="stat-icon text-danger">
+                                        <i class="bi bi-x-circle"></i>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="api-errors-count">0</span>
+                                        <span class="stat-label">Fehler/Keine Daten</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Errors and No Data Section -->
+                        <div id="api-issues-section" class="mt-4" style="display: none;">
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle me-2"></i>Hinweise zu fehlenden Daten</h6>
+                                <div id="api-issues-list" style="max-height: 200px; overflow-y: auto;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- CSV Duplicates Section -->
+                        <div id="csv-duplicates-section" class="mt-4" style="display: none;">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <i class="bi bi-files me-2"></i>Alle CSV Duplikate (gleiche Bestellnummer)
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped mb-0" id="csv-duplicates-table">
+                                            <thead class="table-warning sticky-top">
+                                                <tr>
+                                                    <th>Bestellnummer</th>
+                                                    <th>Anzahl in CSV</th>
+                                                    <th>Gesamt</th>
+                                                    <th>Datum</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- API Data Table -->
+                        <div class="mt-4">
+                            <h5><i class="bi bi-cloud me-2"></i>API Daten (TYP=Versanddienstleistun)</h5>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="api-data-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                    <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation Buttons -->
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-secondary btn-lg" id="back-to-step2-btn">
+                                <i class="bi bi-arrow-left me-2"></i>Zurück
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg flex-grow-1" id="show-results-btn">
+                                <i class="bi bi-check-circle me-2"></i>Vergleich anzeigen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Final Results -->
+        <div class="wizard-step" id="step-4" style="display: none;">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-success-subtle text-success">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div>
+                            <h4>Vergleichsergebnis</h4>
+                            <p class="text-muted mb-0">CSV vs. API Datenabgleich</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparison Summary -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-info text-white">
+                                    <i class="bi bi-file-earmark-csv me-2"></i>CSV Daten
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Zeilen:</span>
+                                        <strong id="result-csv-rows">0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Gesamt Summe:</span>
+                                        <strong id="result-csv-sum" class="text-success">€0,00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="bi bi-cloud me-2"></i>API Daten
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Zeilen:</span>
+                                        <strong id="result-api-rows">0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Gesamt Summe:</span>
+                                        <strong id="result-api-sum" class="text-success">€0,00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sum Comparison Alert -->
+                    <div class="alert mt-4" id="sum-comparison-alert">
+                        <i class="bi me-2" id="sum-comparison-icon"></i>
+                        <span id="sum-comparison-text"></span>
+                    </div>
+                    
+                    <!-- Tabs for tables -->
+                    <ul class="nav nav-tabs mt-4" id="resultTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="api-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#api-table-panel" type="button" role="tab">
+                                <i class="bi bi-cloud me-1"></i>API Daten
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="csv-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#csv-table-panel" type="button" role="tab">
+                                <i class="bi bi-file-csv me-1"></i>CSV Daten
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="duplicates-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#duplicates-panel" type="button" role="tab">
+                                <i class="bi bi-files me-1"></i>Duplikate <span class="badge bg-danger" id="dup-badge">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="resultTabContent">
+                        <!-- API Data Table -->
+                        <div class="tab-pane fade show active" id="api-table-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="api-result-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                    <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- CSV Data Table -->
+                        <div class="tab-pane fade" id="csv-table-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="csv-final-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                    <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Duplicates Table -->
+                        <div class="tab-pane fade" id="duplicates-panel" role="tabpanel">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Diese Tabelle zeigt Zeilen aus der CSV-Datei, die Duplikate sind 
+                                (gleiche Abrechnungsnummer und Typ), aber in der API nur einmal vorkommen.
+                            </div>
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="duplicates-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" id="back-to-step3-btn">
+                            <i class="bi bi-arrow-left me-2"></i>Zurück
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary flex-grow-1" id="restart-btn">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Neu starten
+                        </button>
+                        <button type="button" class="btn btn-success flex-grow-1" id="download-results-btn">
+                            <i class="bi bi-download me-2"></i>Ergebnisse herunterladen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    gap: 1rem;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.upload-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.upload-zone.dragover {
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: #ffc107;
+}
+
+.upload-text {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.file-selected {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.file-selected i {
+    font-size: 1.5rem;
+}
+
+.table-row-duplicate {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+}
+
+.table-row-highlight {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const uploadZone = document.getElementById('amazon-upload-zone');
+    const fileInput = document.getElementById('amazon-csv-file');
+    const uploadForm = document.getElementById('amazon-upload-form');
+    const processBtn = document.getElementById('process-csv-btn');
+    const abrechnungsnummerInput = document.getElementById('abrechnungsnummer');
+    
+    // State
+    let csvData = null;
+    let filteredCsvData = null;
+    let apiData = null;
+    let duplicates = [];
+    
+    // File upload handling
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileDisplay();
+        }
+    });
+    
+    fileInput.addEventListener('change', updateFileDisplay);
+    
+    function updateFileDisplay() {
+        const file = fileInput.files[0];
+        if (file) {
+            uploadZone.querySelector('.upload-content').style.display = 'none';
+            const fileSelected = uploadZone.querySelector('.file-selected');
+            fileSelected.style.display = 'flex';
+            fileSelected.querySelector('.file-name').textContent = file.name;
+            checkFormValidity();
+        }
+    }
+    
+    uploadZone.querySelector('.remove-file').addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.value = '';
+        uploadZone.querySelector('.upload-content').style.display = 'block';
+        uploadZone.querySelector('.file-selected').style.display = 'none';
+        checkFormValidity();
+    });
+    
+    abrechnungsnummerInput.addEventListener('input', checkFormValidity);
+    
+    function checkFormValidity() {
+        const hasFile = fileInput.files.length > 0;
+        const hasAbrechnungsnr = abrechnungsnummerInput.value.trim().length > 0;
+        processBtn.disabled = !(hasFile && hasAbrechnungsnr);
+    }
+    
+    // Form submission
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('csv_file', fileInput.files[0]);
+        formData.append('abrechnungsnummer', abrechnungsnummerInput.value.trim());
+        
+        processBtn.disabled = true;
+        processBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird verarbeitet...';
+        
+        try {
+            const response = await fetch('/api/amazon/process-csv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                csvData = result.all_data;
+                filteredCsvData = result.filtered_data;
+                showStep2(result);
+            } else {
+                showToast('error', result.message);
+            }
+        } catch (error) {
+            showToast('error', 'Fehler beim Verarbeiten der CSV-Datei: ' + error.message);
+        } finally {
+            processBtn.disabled = false;
+            processBtn.innerHTML = '<i class="bi bi-gear me-2"></i>CSV verarbeiten';
+        }
+    });
+    
+    function showStep2(result) {
+        // Update progress indicators
+        document.querySelector('[data-step="1"]').classList.remove('active');
+        document.querySelector('[data-step="1"]').classList.add('completed');
+        document.querySelector('[data-step="2"]').classList.add('active');
+        document.getElementById('connector-1').classList.add('completed');
+        
+        // Update stats
+        document.getElementById('csv-row-count').textContent = result.row_count;
+        document.getElementById('csv-gesamt-sum').textContent = formatCurrency(result.gesamt_sum);
+        document.getElementById('csv-abrechnungsnr').textContent = result.abrechnungsnummer;
+        
+        // Build table
+        buildTable('csv-result-table', result.filtered_data, result.columns, result.gesamt_sum);
+        
+        // Show step 2
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+    }
+    
+    // Fetch API data
+    document.getElementById('fetch-api-btn').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true;
+        
+        // Show step 3
+        document.querySelector('[data-step="2"]').classList.remove('active');
+        document.querySelector('[data-step="2"]').classList.add('completed');
+        document.querySelector('[data-step="3"]').classList.add('active');
+        document.getElementById('connector-2').classList.add('completed');
+        
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-3').style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/amazon/fetch-api-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    abrechnungsnummer: abrechnungsnummerInput.value.trim(),
+                    bestellnummern: filteredCsvData.map(row => row['Bestellnummer'])
+                })
+            });
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            let buffer = '';
+            let totalOrders = 0;
+            let processedOrders = 0;
+            
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, {stream: true});
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.type === 'init') {
+                                totalOrders = data.total;
+                                document.getElementById('api-progress-text').textContent = `0 / ${totalOrders}`;
+                            } else if (data.type === 'progress') {
+                                processedOrders = data.current;
+                                const percent = (processedOrders / totalOrders) * 100;
+                                document.getElementById('api-progress-bar').style.width = percent + '%';
+                                document.getElementById('api-progress-text').textContent = `${processedOrders} / ${totalOrders}`;
+                                document.getElementById('api-current-order').textContent = `Bestellnummer: ${data.order_id}`;
+                            } else if (data.type === 'complete') {
+                                apiData = data.api_data;
+                                duplicates = data.duplicates;
+                                
+                                document.getElementById('api-progress-bar').style.width = '100%';
+                                document.getElementById('api-progress-bar').classList.remove('progress-bar-animated');
+                                document.getElementById('api-progress-bar').classList.add('bg-success');
+                                
+                                // Update all stats
+                                const stats = data.stats || {};
+                                document.getElementById('api-total-orders').textContent = stats.total_orders || 0;
+                                document.getElementById('api-matches').textContent = stats.api_matches || 0;
+                                document.getElementById('api-row-count').textContent = stats.api_with_dups || data.api_data.length;
+                                document.getElementById('api-gesamt-sum').textContent = formatCurrency(data.api_sum);
+                                document.getElementById('csv-duplicate-count').textContent = stats.csv_duplicate_rows || 0;
+                                document.getElementById('api-errors-count').textContent = (stats.errors || 0) + (stats.no_data || 0);
+                                
+                                // Display Abrechnungsnummer in the table header (if element exists)
+                                const abrechnungsnrDisplay = document.getElementById('api-abrechnungsnr-display');
+                                if (abrechnungsnrDisplay) {
+                                    abrechnungsnrDisplay.textContent = abrechnungsnummerInput.value.trim();
+                                }
+                                
+                                // Show API errors and no data issues
+                                const apiErrors = data.api_errors || [];
+                                const ordersNoData = data.orders_no_data || [];
+                                if (apiErrors.length > 0 || ordersNoData.length > 0) {
+                                    let issuesHtml = '';
+                                    if (apiErrors.length > 0) {
+                                        issuesHtml += '<strong>API Fehler:</strong><ul class="mb-2">';
+                                        apiErrors.forEach(e => {
+                                            issuesHtml += `<li><code>${e.order_id}</code>: ${e.error}</li>`;
+                                        });
+                                        issuesHtml += '</ul>';
+                                    }
+                                    if (ordersNoData.length > 0) {
+                                        issuesHtml += '<strong>Keine passenden API-Daten für:</strong>';
+                                        ordersNoData.forEach((e, idx) => {
+                                            const csvCountBadge = e.csv_count > 1 
+                                                ? `<span class="badge bg-info ms-1">${e.csv_count}x in CSV</span>` 
+                                                : '';
+                                            const collapseId = `api-entries-${idx}`;
+                                            issuesHtml += `
+                                                <div class="card mt-2 mb-2">
+                                                    <div class="card-header py-2">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <span><code>${e.order_id}</code> ${csvCountBadge}</span>
+                                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                                                                ${e.entries_count} API-Einträge anzeigen <i class="bi bi-chevron-down"></i>
+                                                            </button>
+                                                        </div>
+                                                        <small class="text-muted">${e.reason}</small>
+                                                    </div>
+                                                    <div class="collapse" id="${collapseId}">
+                                                        <div class="card-body p-2">
+                                                            ${buildApiEntriesTable(e.api_entries || [])}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        });
+                                    }
+                                    document.getElementById('api-issues-list').innerHTML = issuesHtml;
+                                    document.getElementById('api-issues-section').style.display = 'block';
+                                }
+                                
+                                // Show CSV duplicates
+                                const csvDuplicates = data.csv_duplicates || [];
+                                if (csvDuplicates.length > 0) {
+                                    const tbody = document.querySelector('#csv-duplicates-table tbody');
+                                    tbody.innerHTML = '';
+                                    csvDuplicates.forEach(dup => {
+                                        const row = dup.row || {};
+                                        const tr = document.createElement('tr');
+                                        tr.innerHTML = `
+                                            <td><code>${dup.bestellnummer}</code></td>
+                                            <td><span class="badge bg-warning text-dark">${dup.count_in_csv}x</span></td>
+                                            <td>${formatCurrency(row.Gesamt || 0)}</td>
+                                            <td>${row['Datum/Uhrzeit'] || row['Datum'] || '-'}</td>
+                                        `;
+                                        tbody.appendChild(tr);
+                                    });
+                                    document.getElementById('csv-duplicates-section').style.display = 'block';
+                                }
+                                
+                                // Build API data table with all columns and GESAMT sum
+                                if (data.api_data.length > 0) {
+                                    const apiColumns = Object.keys(data.api_data[0]).filter(c => !c.startsWith('_'));
+                                    buildTable('api-data-table', data.api_data, apiColumns, data.api_sum, 'GESAMT');
+                                }
+                                
+                                document.getElementById('api-fetch-progress').style.display = 'none';
+                                document.getElementById('api-result-summary').style.display = 'block';
+                            } else if (data.type === 'error') {
+                                showToast('error', data.message);
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            showToast('error', 'Fehler beim Abrufen der API-Daten: ' + error.message);
+        }
+    });
+    
+    // Show results
+    document.getElementById('show-results-btn').addEventListener('click', function() {
+        document.querySelector('[data-step="3"]').classList.remove('active');
+        document.querySelector('[data-step="3"]').classList.add('completed');
+        document.querySelector('[data-step="4"]').classList.add('active');
+        document.getElementById('connector-3').classList.add('completed');
+        
+        document.getElementById('step-3').style.display = 'none';
+        document.getElementById('step-4').style.display = 'block';
+        
+        showFinalResults();
+    });
+    
+    function showFinalResults() {
+        // CSV summary
+        const csvSum = filteredCsvData.reduce((sum, row) => sum + parseFloat(row['Gesamt'] || 0), 0);
+        document.getElementById('result-csv-rows').textContent = filteredCsvData.length;
+        document.getElementById('result-csv-sum').textContent = '€' + formatCurrency(csvSum);
+        
+        // API summary
+        const apiSum = apiData.reduce((sum, row) => sum + parseFloat(row['GESAMT'] || 0), 0);
+        document.getElementById('result-api-rows').textContent = apiData.length;
+        document.getElementById('result-api-sum').textContent = '€' + formatCurrency(apiSum);
+        
+        // Compare sums
+        const diff = Math.abs(csvSum - apiSum);
+        const alert = document.getElementById('sum-comparison-alert');
+        const icon = document.getElementById('sum-comparison-icon');
+        const text = document.getElementById('sum-comparison-text');
+        
+        if (diff < 0.01) {
+            alert.className = 'alert alert-success mt-4';
+            icon.className = 'bi bi-check-circle-fill me-2';
+            text.textContent = 'Die Summen stimmen überein!';
+        } else {
+            alert.className = 'alert alert-warning mt-4';
+            icon.className = 'bi bi-exclamation-triangle-fill me-2';
+            text.textContent = `Differenz: €${formatCurrency(diff)} (CSV: €${formatCurrency(csvSum)}, API: €${formatCurrency(apiSum)})`;
+        }
+        
+        // Build API table
+        if (apiData.length > 0) {
+            const apiColumns = Object.keys(apiData[0]);
+            buildTable('api-result-table', apiData, apiColumns, apiSum, 'GESAMT', duplicates.map(d => d.api_row));
+        }
+        
+        // Build CSV table
+        const csvColumns = Object.keys(filteredCsvData[0]);
+        buildTable('csv-final-table', filteredCsvData, csvColumns, csvSum, 'Gesamt', duplicates.map(d => d.csv_row));
+        
+        // Build duplicates table
+        document.getElementById('dup-badge').textContent = duplicates.length;
+        if (duplicates.length > 0) {
+            const dupRows = duplicates.map(d => d.csv_row);
+            const dupColumns = Object.keys(dupRows[0]);
+            buildTable('duplicates-table', dupRows, dupColumns, null, null, null, true);
+        }
+    }
+    
+    function buildTable(tableId, data, columns, sum = null, sumColumn = null, highlightRows = null, allHighlight = false) {
+        const table = document.getElementById(tableId);
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
+        
+        // Header
+        thead.innerHTML = '<tr>' + columns.map(col => `<th>${col}</th>`).join('') + '</tr>';
+        
+        // Body
+        tbody.innerHTML = data.map((row, idx) => {
+            const isHighlight = allHighlight || (highlightRows && highlightRows.some(hr => JSON.stringify(hr) === JSON.stringify(row)));
+            return `<tr class="${isHighlight ? 'table-row-duplicate' : ''}">` + 
+                columns.map(col => `<td>${row[col] !== null && row[col] !== undefined ? row[col] : ''}</td>`).join('') + 
+                '</tr>';
+        }).join('');
+        
+        // Footer with sum
+        if (sum !== null && sumColumn && tfoot) {
+            const sumColIdx = columns.indexOf(sumColumn);
+            if (sumColIdx >= 0) {
+                tfoot.innerHTML = '<tr>' + columns.map((col, idx) => {
+                    if (idx === sumColIdx) {
+                        return `<td class="fw-bold">${formatCurrency(sum)}</td>`;
+                    }
+                    return idx === 0 ? '<td class="fw-bold">SUMME</td>' : '<td></td>';
+                }).join('') + '</tr>';
+            }
+        }
+    }
+    
+    function formatCurrency(value) {
+        return parseFloat(value).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    
+    function buildApiEntriesTable(entries) {
+        if (!entries || entries.length === 0) {
+            return '<p class="text-muted mb-0">Keine Einträge</p>';
+        }
+        
+        // Get columns from first entry, filter out internal keys
+        const columns = Object.keys(entries[0]).filter(c => !c.startsWith('_'));
+        
+        let html = '<div class="table-responsive"><table class="table table-sm table-bordered mb-0">';
+        html += '<thead class="table-light"><tr>';
+        columns.forEach(col => {
+            html += `<th class="small">${col}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+        
+        entries.forEach(entry => {
+            html += '<tr>';
+            columns.forEach(col => {
+                let val = entry[col] || '';
+                // Highlight TYP and ABRECHNUNGSNR columns to show why they don't match
+                if (col === 'TYP' || col === 'ABRECHNUNGSNR') {
+                    html += `<td class="small"><mark>${val}</mark></td>`;
+                } else {
+                    html += `<td class="small">${val}</td>`;
+                }
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        return html;
+    }
+    
+    function showToast(type, message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        container.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
+    }
+    
+    // Back navigation buttons
+    document.getElementById('back-to-step1-btn').addEventListener('click', function() {
+        document.querySelector('[data-step="2"]').classList.remove('active');
+        document.querySelector('[data-step="1"]').classList.add('active');
+        document.getElementById('connector-1').classList.remove('completed');
+        
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-1').style.display = 'block';
+    });
+    
+    document.getElementById('back-to-step2-btn').addEventListener('click', function() {
+        document.querySelector('[data-step="3"]').classList.remove('active');
+        document.querySelector('[data-step="2"]').classList.add('active');
+        document.getElementById('connector-2').classList.remove('completed');
+        
+        document.getElementById('step-3').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+    });
+    
+    document.getElementById('back-to-step3-btn').addEventListener('click', function() {
+        document.querySelector('[data-step="4"]').classList.remove('active');
+        document.querySelector('[data-step="3"]').classList.add('active');
+        document.getElementById('connector-3').classList.remove('completed');
+        
+        document.getElementById('step-4').style.display = 'none';
+        document.getElementById('step-3').style.display = 'block';
+    });
+    
+    // Restart
+    document.getElementById('restart-btn').addEventListener('click', function() {
+        location.reload();
+    });
+    
+    // Download results
+    document.getElementById('download-results-btn').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/api/amazon/download-results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    csv_data: filteredCsvData,
+                    api_data: apiData,
+                    duplicates: duplicates,
+                    abrechnungsnummer: abrechnungsnummerInput.value.trim()
+                })
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `amazon_vergleich_${abrechnungsnummerInput.value.trim()}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } else {
+                showToast('error', 'Fehler beim Herunterladen');
+            }
+        } catch (error) {
+            showToast('error', 'Fehler: ' + error.message);
+        }
+    });
+});
+</script>
+{% endblock %}

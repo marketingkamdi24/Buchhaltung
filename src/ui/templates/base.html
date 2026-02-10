@@ -46,7 +46,14 @@
             <li class="nav-item">
                 <a href="{{ url_for('process_page') }}" class="nav-link {% if page == 'process' %}active{% endif %}">
                     <i class="bi bi-gear-wide-connected"></i>
-                    <span>Datenverarbeitung</span>
+                    <span>eBay</span>
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{{ url_for('amazon_page') }}" class="nav-link {% if page == 'amazon' %}active{% endif %}">
+                    <i class="bi bi-box-seam"></i>
+                    <span>Amazon</span>
                 </a>
             </li>
             
