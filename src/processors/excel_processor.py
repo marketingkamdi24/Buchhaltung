@@ -104,6 +104,14 @@ class ExcelProcessor:
         
         consolidated = []
         for key, rows in groups.items():
+            bestellnummer, typ = key
+            typ_str = str(typ) if typ else ''
+            
+            # Do NOT consolidate Rückerstattung or Einbehalt rows - keep them as separate rows
+            if 'ckerstattung' in typ_str or 'Rückerstattung' in typ_str or 'Einbehalt' in typ_str:
+                consolidated.extend(rows)
+                continue
+            
             if len(rows) == 1:
                 # No duplicates, keep as-is
                 consolidated.append(rows[0])
