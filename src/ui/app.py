@@ -939,6 +939,188 @@ def api_amazon_fetch_api_data():
     return app.response_class(generate(), mimetype='text/event-stream')
 
 
+@app.route('/api/amazon/process-excel-list', methods=['POST'])
+@login_required
+def api_amazon_process_excel_list():
+    """Process GDI Excel and Amazon CSV for Excel List comparison mode."""
+    try:
+        if 'gdi_file' not in request.files or 'csv_file' not in request.files:
+            return jsonify({'success': False, 'message': 'Beide Dateien (GDI Excel und Amazon CSV) werden benötigt'})
+        
+        gdi_file = request.files['gdi_file']
+        csv_file = request.files['csv_file']
+        abrechnungsnummer = request.form.get('abrechnungsnummer', '').strip()
+        
+        if not abrechnungsnummer:
+            return jsonify({'success': False, 'message': 'Abrechnungsnummer fehlt'})
+        
+        if gdi_file.filename == '' or csv_file.filename == '':
+            return jsonify({'success': False, 'message': 'Bitte beide Dateien auswählen'})
+        
+        # --- Process GDI Excel ---
+        gdi_df = pd.read_excel(gdi_file, engine='openpyxl')
+        
+        # Column manipulation: Move KUNDENNR from between ORDER_ID/KUNDE to between KUNDE/BELEGNR_GDI
+        # This simulates: Insert col before H, move F(KUNDENNR) to H, delete original F
+        cols = list(gdi_df.columns)
+        if 'KUNDENNR' in cols and 'BELEGNR_GDI' in cols:
+            cols.remove('KUNDENNR')
+            belegnr_idx = cols.index('BELEGNR_GDI')
+            cols.insert(belegnr_idx, 'KUNDENNR')
+            gdi_df = gdi_df[cols]
+        
+        # Filter by TYP containing Versanddienstleistun
+        versand_mask = gdi_df['TYP'].astype(str).str.contains('Versanddienstleistun', case=False, na=False)
+        gdi_sheet2 = gdi_df[versand_mask].copy()  # Versanddienstleistungen -> Sheet 2
+        gdi_sheet1 = gdi_df[~versand_mask].copy()  # Everything else -> Sheet 1
+        
+        # --- Process Amazon CSV ---
+        import io
+        csv_content = csv_file.read().decode('utf-8')
+        amazon_df = pd.read_csv(io.StringIO(csv_content), sep=';', skiprows=7, decimal=',')
+        amazon_df.columns = amazon_df.columns.str.strip()
+        
+        # Filter by Abrechnungsnummer and Typ = Versanddienstleistungen
+        amazon_filtered = amazon_df[
+            (amazon_df['Abrechnungsnummer'].astype(str) == str(abrechnungsnummer)) &
+            (amazon_df['Typ'].astype(str).str.contains('Versanddienstleistung', case=False, na=False))
+        ].copy()
+        
+        # Calculate sum of Gesamt column
+        amazon_filtered['Gesamt'] = pd.to_numeric(
+            amazon_filtered['Gesamt'].astype(str).str.replace(',', '.'), errors='coerce'
+        )
+        amazon_gesamt_sum = float(amazon_filtered['Gesamt'].sum())
+        
+        # --- Detect duplicates ---
+        # Count occurrences of each Bestellnummer in Amazon CSV
+        amazon_order_counts = amazon_filtered['Bestellnummer'].astype(str).value_counts()
+        # Count occurrences of each ORDER_ID in GDI Versand
+        gdi_order_counts = gdi_sheet2['ORDER_ID'].astype(str).value_counts()
+        
+        # Find orders that appear more often in Amazon than in GDI
+        duplicate_orders = set()
+        for order_id, amazon_count in amazon_order_counts.items():
+            gdi_count = gdi_order_counts.get(order_id, 0)
+            if amazon_count > gdi_count:
+                duplicate_orders.add(str(order_id))
+        
+        # Duplicate GDI rows to match Amazon counts before calculating sum
+        rows_to_add = []
+        for order_id in duplicate_orders:
+            amazon_count = amazon_order_counts.get(order_id, 0)
+            gdi_count = gdi_order_counts.get(order_id, 0)
+            if amazon_count > gdi_count:
+                gdi_rows_for_order = gdi_sheet2[gdi_sheet2['ORDER_ID'].astype(str) == order_id]
+                for _ in range(amazon_count - gdi_count):
+                    dup_row = gdi_rows_for_order.iloc[0].copy()
+                    rows_to_add.append(dup_row)
+        
+        if rows_to_add:
+            gdi_sheet2 = pd.concat([gdi_sheet2, pd.DataFrame(rows_to_add)], ignore_index=True)
+        
+        # NOW calculate GESAMT sum (after duplicating rows)
+        gdi_versand_sum = float(pd.to_numeric(gdi_sheet2['GESAMT'], errors='coerce').sum())
+        
+        # Mark duplicates in Amazon data
+        amazon_filtered = amazon_filtered.copy()
+        amazon_filtered['_is_duplicate'] = amazon_filtered['Bestellnummer'].astype(str).isin(duplicate_orders)
+        
+        # Mark matching orders in GDI data (includes the newly duplicated rows)
+        gdi_sheet2 = gdi_sheet2.copy()
+        gdi_sheet2['_is_duplicate'] = gdi_sheet2['ORDER_ID'].astype(str).isin(duplicate_orders)
+        
+        # Build duplicate detail list
+        duplicate_rows = []
+        for order_id in sorted(duplicate_orders):
+            amz_rows = amazon_filtered[amazon_filtered['Bestellnummer'].astype(str) == order_id]
+            gdi_rows = gdi_sheet2[gdi_sheet2['ORDER_ID'].astype(str) == order_id]
+            duplicate_rows.append({
+                'order_id': order_id,
+                'amazon_count': len(amz_rows),
+                'gdi_count': len(gdi_rows),
+                'amazon_rows': amz_rows.drop(columns=['_is_duplicate']).fillna('').to_dict('records'),
+                'gdi_rows': gdi_rows.drop(columns=['_is_duplicate']).fillna('').to_dict('records')
+            })
+        
+        # --- Save processed files ---
+        config = get_config()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Columns for export (without internal _is_duplicate flag)
+        gdi_export_cols = [c for c in gdi_sheet2.columns if not c.startswith('_')]
+        amazon_export_cols = [c for c in amazon_filtered.columns if not c.startswith('_')]
+        
+        # Save GDI Excel with two sheets
+        gdi_output_filename = f"gdi_bearbeitet_{abrechnungsnummer}_{timestamp}.xlsx"
+        gdi_output_path = config.app.output_dir / gdi_output_filename
+        
+        gdi_sheet1_export_cols = [c for c in gdi_sheet1.columns if not c.startswith('_')]
+        with pd.ExcelWriter(str(gdi_output_path), engine='openpyxl') as writer:
+            gdi_sheet1[gdi_sheet1_export_cols].to_excel(writer, sheet_name='Tabellenblatt1', index=False)
+            # Sheet 2 with sum row
+            gdi_s2_export = gdi_sheet2[gdi_export_cols].copy()
+            sum_row = {col: '' for col in gdi_export_cols}
+            sum_row['GESAMT'] = gdi_versand_sum
+            if len(gdi_export_cols) > 0:
+                sum_row[gdi_export_cols[0]] = 'SUMME'
+            gdi_s2_export = pd.concat([gdi_s2_export, pd.DataFrame([sum_row])], ignore_index=True)
+            gdi_s2_export.to_excel(writer, sheet_name='Versanddienstleistungen', index=False)
+        
+        # Save Amazon filtered data
+        amazon_output_filename = f"amazon_versand_{abrechnungsnummer}_{timestamp}.xlsx"
+        amazon_output_path = config.app.output_dir / amazon_output_filename
+        
+        amazon_export = amazon_filtered[amazon_export_cols].copy()
+        sum_row = {col: '' for col in amazon_export_cols}
+        sum_row['Gesamt'] = amazon_gesamt_sum
+        if len(amazon_export_cols) > 0:
+            sum_row[amazon_export_cols[0]] = 'SUMME'
+        amazon_export = pd.concat([amazon_export, pd.DataFrame([sum_row])], ignore_index=True)
+        amazon_export.to_excel(str(amazon_output_path), index=False)
+        
+        # --- Prepare response data ---
+        # Include _is_duplicate flag for frontend highlighting
+        gdi_sheet2_records = gdi_sheet2.fillna('').to_dict('records')
+        gdi_sheet1_records = gdi_sheet1.head(50).fillna('').to_dict('records')
+        amazon_records = amazon_filtered.fillna('').to_dict('records')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Verarbeitung erfolgreich',
+            'gdi': {
+                'sheet1_count': len(gdi_sheet1),
+                'sheet2_count': len(gdi_sheet2),
+                'versand_sum': gdi_versand_sum,
+                'sheet2_data': gdi_sheet2_records,
+                'sheet2_columns': gdi_export_cols,
+                'sheet1_data': gdi_sheet1_records,
+                'sheet1_columns': [c for c in gdi_sheet1.columns if not c.startswith('_')],
+                'download_url': f'/api/download/{gdi_output_filename}'
+            },
+            'amazon': {
+                'row_count': len(amazon_filtered),
+                'gesamt_sum': amazon_gesamt_sum,
+                'data': amazon_records,
+                'columns': amazon_export_cols,
+                'download_url': f'/api/download/{amazon_output_filename}'
+            },
+            'duplicates': {
+                'count': len(duplicate_orders),
+                'duplicate_amazon_rows': int(amazon_filtered['_is_duplicate'].sum()),
+                'orders': duplicate_rows
+            },
+            'abrechnungsnummer': abrechnungsnummer
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'message': f'Fehler: {str(e)}\n{traceback.format_exc()}'
+        })
+
+
 @app.route('/api/amazon/download-results', methods=['POST'])
 @login_required
 def api_amazon_download_results():

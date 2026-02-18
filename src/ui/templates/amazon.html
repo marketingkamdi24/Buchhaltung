@@ -8,6 +8,40 @@ Amazon Datenverarbeitung
 {% endblock %}
 
 {% block content %}
+<!-- Mode Selection -->
+<div id="mode-selection" class="mb-4">
+    <div class="text-center mb-4">
+        <h4><i class="bi bi-signpost-split me-2"></i>Verarbeitungsmethode wählen</h4>
+        <p class="text-muted">Wählen Sie, wie die Amazon-Daten verarbeitet werden sollen</p>
+    </div>
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-5">
+            <div class="card h-100 mode-card" id="select-api-mode" role="button" tabindex="0">
+                <div class="card-body text-center p-5">
+                    <div class="mb-3">
+                        <i class="bi bi-cloud-download display-4 text-primary"></i>
+                    </div>
+                    <h5>Mit API verarbeiten</h5>
+                    <p class="text-muted small mb-0">Amazon CSV hochladen, Bestellnummern extrahieren und API-Daten für jede Bestellung abrufen</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card h-100 mode-card" id="select-excel-mode" role="button" tabindex="0">
+                <div class="card-body text-center p-5">
+                    <div class="mb-3">
+                        <i class="bi bi-file-earmark-spreadsheet display-4 text-success"></i>
+                    </div>
+                    <h5>Mit Excel-Liste verarbeiten</h5>
+                    <p class="text-muted small mb-0">GDI-Excel und Amazon-CSV hochladen, verarbeiten und Versanddienstleistungen vergleichen</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Mode (existing flow) -->
+<div id="api-mode" style="display: none;">
 <div class="process-wizard">
     <!-- Progress Header -->
     <div class="wizard-progress mb-4">
@@ -478,6 +512,300 @@ Amazon Datenverarbeitung
         </div>
     </div>
 </div>
+</div><!-- end api-mode -->
+
+<!-- Excel List Mode -->
+<div id="excel-list-mode" style="display: none;">
+<div class="process-wizard">
+    <!-- Progress Header -->
+    <div class="wizard-progress mb-4">
+        <div class="progress-track">
+            <div class="progress-step active" data-step="el-1">
+                <div class="step-circle">
+                    <i class="bi bi-upload"></i>
+                </div>
+                <span class="step-label">Dateien hochladen</span>
+            </div>
+            <div class="progress-connector">
+                <div class="connector-line" id="el-connector-1"></div>
+            </div>
+            <div class="progress-step" data-step="el-2">
+                <div class="step-circle">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <span class="step-label">Ergebnis & Vergleich</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="wizard-content">
+        <!-- Step 1: Upload Files -->
+        <div class="wizard-step active" id="el-step-1">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-success-subtle text-success">
+                            <i class="bi bi-upload"></i>
+                        </div>
+                        <div>
+                            <h4>Dateien hochladen</h4>
+                            <p class="text-muted mb-0">Abrechnungsnummer eingeben, GDI-Excel und Amazon-CSV hochladen</p>
+                        </div>
+                    </div>
+
+                    <form id="el-upload-form" class="mt-4">
+                        <!-- Abrechnungsnummer -->
+                        <div class="mb-4">
+                            <label for="el-abrechnungsnummer" class="form-label fw-medium">
+                                <i class="bi bi-hash me-1"></i>Abrechnungsnummer
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="el-abrechnungsnummer"
+                                   placeholder="z.B. 25965563842" required>
+                            <div class="form-text">Die Abrechnungsnummer für die Filterung der Amazon-CSV Daten</div>
+                        </div>
+
+                        <!-- GDI Excel Upload -->
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">
+                                <i class="bi bi-file-earmark-excel me-1 text-success"></i>GDI Excel Datei
+                            </label>
+                            <div class="upload-zone" id="el-gdi-upload-zone">
+                                <input type="file" class="form-control" id="el-gdi-file"
+                                       accept=".xlsx,.xls" style="display: none;">
+                                <div class="upload-content">
+                                    <i class="bi bi-cloud-arrow-up upload-icon text-success"></i>
+                                    <p class="upload-text">GDI-Excel hierher ziehen oder <span class="text-success">durchsuchen</span></p>
+                                    <p class="upload-hint text-muted small">Nur .xlsx, .xls Dateien</p>
+                                </div>
+                                <div class="file-selected" style="display: none;">
+                                    <i class="bi bi-file-earmark-check text-success"></i>
+                                    <span class="file-name"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Amazon CSV Upload -->
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">
+                                <i class="bi bi-file-earmark-csv me-1 text-warning"></i>Amazon CSV Datei
+                            </label>
+                            <div class="upload-zone" id="el-csv-upload-zone">
+                                <input type="file" class="form-control" id="el-csv-file"
+                                       accept=".csv" style="display: none;">
+                                <div class="upload-content">
+                                    <i class="bi bi-cloud-arrow-up upload-icon text-warning"></i>
+                                    <p class="upload-text">Amazon-CSV hierher ziehen oder <span class="text-warning">durchsuchen</span></p>
+                                    <p class="upload-hint text-muted small">Nur .csv Dateien</p>
+                                </div>
+                                <div class="file-selected" style="display: none;">
+                                    <i class="bi bi-file-earmark-check text-success"></i>
+                                    <span class="file-name"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Process Button -->
+                        <button type="submit" class="btn btn-success btn-lg w-100" id="el-process-btn" disabled>
+                            <i class="bi bi-gear me-2"></i>Verarbeiten & Vergleichen
+                        </button>
+                    </form>
+
+                    <!-- Back to mode selection -->
+                    <button type="button" class="btn btn-link text-muted mt-3" id="el-back-to-mode">
+                        <i class="bi bi-arrow-left me-1"></i>Zurück zur Auswahl
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Results & Comparison -->
+        <div class="wizard-step" id="el-step-2" style="display: none;">
+            <div class="card wizard-card">
+                <div class="card-body">
+                    <div class="step-header">
+                        <div class="step-icon bg-success text-white">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </div>
+                        <div>
+                            <h4>Vergleichsergebnis</h4>
+                            <p class="text-muted mb-0">GDI vs. Amazon CSV — Versanddienstleistungen</p>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Summary Cards -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">
+                                    <i class="bi bi-file-earmark-excel me-2"></i>GDI Excel — Versanddienstleistungen
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Zeilen (Versand):</span>
+                                        <strong id="el-gdi-versand-rows">0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Summe GESAMT (Spalte O):</span>
+                                        <strong id="el-gdi-versand-sum" class="text-success">0,00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Zeilen (ohne Versand):</span>
+                                        <strong id="el-gdi-other-rows">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <i class="bi bi-file-earmark-csv me-2"></i>Amazon CSV — Versanddienstleistungen
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Zeilen:</span>
+                                        <strong id="el-amazon-rows">0</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Summe Gesamt:</span>
+                                        <strong id="el-amazon-sum" class="text-success">0,00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Abrechnungsnummer:</span>
+                                        <strong id="el-result-abrechnungsnr">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Duplicates Info Card -->
+                    <div class="row g-3 mt-2" id="el-duplicates-card" style="display: none;">
+                        <div class="col-12">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>Duplikate erkannt
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex gap-4">
+                                        <div>
+                                            <span>Betroffene Bestellnummern:</span>
+                                            <strong id="el-dup-order-count">0</strong>
+                                        </div>
+                                        <div>
+                                            <span>Doppelte Amazon-Zeilen:</span>
+                                            <strong id="el-dup-amazon-rows">0</strong>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 small text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Gelb markierte Zeilen sind Duplikate — in der Amazon-CSV mehrfach vorhanden, in der GDI-Excel nur einmal.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sum Comparison Alert -->
+                    <div class="alert mt-4" id="el-sum-comparison-alert">
+                        <i class="bi me-2" id="el-sum-comparison-icon"></i>
+                        <span id="el-sum-comparison-text"></span>
+                    </div>
+
+                    <!-- Tabs for tables -->
+                    <ul class="nav nav-tabs mt-4" id="elResultTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="el-gdi-tab" data-bs-toggle="tab"
+                                    data-bs-target="#el-gdi-table-panel" type="button" role="tab">
+                                <i class="bi bi-file-earmark-excel me-1"></i>GDI Versand
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="el-amazon-tab" data-bs-toggle="tab"
+                                    data-bs-target="#el-amazon-table-panel" type="button" role="tab">
+                                <i class="bi bi-file-csv me-1"></i>Amazon CSV
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="el-gdi-sheet1-tab" data-bs-toggle="tab"
+                                    data-bs-target="#el-gdi-sheet1-panel" type="button" role="tab">
+                                <i class="bi bi-file-earmark me-1"></i>GDI ohne Versand
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation" id="el-dup-tab-li" style="display: none;">
+                            <button class="nav-link" id="el-dup-tab" data-bs-toggle="tab"
+                                    data-bs-target="#el-dup-table-panel" type="button" role="tab">
+                                <i class="bi bi-files me-1 text-danger"></i>Duplikate
+                                <span class="badge bg-danger ms-1" id="el-dup-badge">0</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-3" id="elResultTabContent">
+                        <!-- GDI Versanddienstleistungen Table -->
+                        <div class="tab-pane fade show active" id="el-gdi-table-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="el-gdi-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                    <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Amazon CSV Table -->
+                        <div class="tab-pane fade" id="el-amazon-table-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="el-amazon-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                    <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- GDI Sheet 1 (without Versand) Table -->
+                        <div class="tab-pane fade" id="el-gdi-sheet1-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="el-gdi-sheet1-table">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Duplicates Detail Table -->
+                        <div class="tab-pane fade" id="el-dup-table-panel" role="tabpanel">
+                            <div id="el-dup-details"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary" id="el-back-to-step1">
+                            <i class="bi bi-arrow-left me-2"></i>Zurück
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary flex-grow-1" id="el-restart-btn">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Neu starten
+                        </button>
+                        <a href="#" class="btn btn-success flex-grow-1" id="el-download-gdi" download>
+                            <i class="bi bi-download me-2"></i>GDI herunterladen
+                        </a>
+                        <a href="#" class="btn btn-warning flex-grow-1" id="el-download-amazon" download>
+                            <i class="bi bi-download me-2"></i>Amazon herunterladen
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div><!-- end excel-list-mode -->
 
 <style>
 .stat-card {
@@ -554,12 +882,304 @@ Amazon Datenverarbeitung
 .table-row-highlight {
     background-color: rgba(13, 110, 253, 0.1) !important;
 }
+
+.mode-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-width: 2px;
+}
+
+.mode-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.mode-card:focus {
+    outline: 3px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // =========================================================================
+    // Mode Selection
+    // =========================================================================
+    document.getElementById('select-api-mode').addEventListener('click', function() {
+        document.getElementById('mode-selection').style.display = 'none';
+        document.getElementById('api-mode').style.display = 'block';
+    });
+
+    document.getElementById('select-excel-mode').addEventListener('click', function() {
+        document.getElementById('mode-selection').style.display = 'none';
+        document.getElementById('excel-list-mode').style.display = 'block';
+    });
+
+    // =========================================================================
+    // Excel List Mode
+    // =========================================================================
+    (function initExcelListMode() {
+        const elGdiZone = document.getElementById('el-gdi-upload-zone');
+        const elGdiFile = document.getElementById('el-gdi-file');
+        const elCsvZone = document.getElementById('el-csv-upload-zone');
+        const elCsvFile = document.getElementById('el-csv-file');
+        const elForm = document.getElementById('el-upload-form');
+        const elProcessBtn = document.getElementById('el-process-btn');
+        const elAbrechnungsnr = document.getElementById('el-abrechnungsnummer');
+
+        // File upload helpers
+        function setupUploadZone(zone, input) {
+            zone.addEventListener('click', (e) => {
+                if (!e.target.closest('.remove-file')) input.click();
+            });
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    updateZoneDisplay(zone, input);
+                }
+            });
+            input.addEventListener('change', () => updateZoneDisplay(zone, input));
+            zone.querySelector('.remove-file').addEventListener('click', (e) => {
+                e.stopPropagation();
+                input.value = '';
+                zone.querySelector('.upload-content').style.display = 'block';
+                zone.querySelector('.file-selected').style.display = 'none';
+                elCheckFormValidity();
+            });
+        }
+
+        function updateZoneDisplay(zone, input) {
+            const file = input.files[0];
+            if (file) {
+                zone.querySelector('.upload-content').style.display = 'none';
+                const sel = zone.querySelector('.file-selected');
+                sel.style.display = 'flex';
+                sel.querySelector('.file-name').textContent = file.name;
+                elCheckFormValidity();
+            }
+        }
+
+        function elCheckFormValidity() {
+            const hasGdi = elGdiFile.files.length > 0;
+            const hasCsv = elCsvFile.files.length > 0;
+            const hasNr = elAbrechnungsnr.value.trim().length > 0;
+            elProcessBtn.disabled = !(hasGdi && hasCsv && hasNr);
+        }
+
+        setupUploadZone(elGdiZone, elGdiFile);
+        setupUploadZone(elCsvZone, elCsvFile);
+        elAbrechnungsnr.addEventListener('input', elCheckFormValidity);
+
+        // Back to mode selection
+        document.getElementById('el-back-to-mode').addEventListener('click', function() {
+            document.getElementById('excel-list-mode').style.display = 'none';
+            document.getElementById('mode-selection').style.display = 'block';
+        });
+
+        // Form submission
+        elForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            elProcessBtn.disabled = true;
+            elProcessBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird verarbeitet...';
+
+            const formData = new FormData();
+            formData.append('gdi_file', elGdiFile.files[0]);
+            formData.append('csv_file', elCsvFile.files[0]);
+            formData.append('abrechnungsnummer', elAbrechnungsnr.value.trim());
+
+            try {
+                const response = await fetch('/api/amazon/process-excel-list', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showElResults(result);
+                } else {
+                    elShowToast('error', result.message);
+                }
+            } catch (error) {
+                elShowToast('error', 'Fehler: ' + error.message);
+            } finally {
+                elProcessBtn.disabled = false;
+                elProcessBtn.innerHTML = '<i class="bi bi-gear me-2"></i>Verarbeiten & Vergleichen';
+            }
+        });
+
+        function showElResults(result) {
+            // Update progress
+            document.querySelector('[data-step="el-1"]').classList.remove('active');
+            document.querySelector('[data-step="el-1"]').classList.add('completed');
+            document.querySelector('[data-step="el-2"]').classList.add('active');
+            document.getElementById('el-connector-1').classList.add('completed');
+
+            // GDI stats
+            document.getElementById('el-gdi-versand-rows').textContent = result.gdi.sheet2_count;
+            document.getElementById('el-gdi-versand-sum').textContent = elFormatCurrency(result.gdi.versand_sum);
+            document.getElementById('el-gdi-other-rows').textContent = result.gdi.sheet1_count;
+
+            // Amazon stats
+            document.getElementById('el-amazon-rows').textContent = result.amazon.row_count;
+            document.getElementById('el-amazon-sum').textContent = elFormatCurrency(result.amazon.gesamt_sum);
+            document.getElementById('el-result-abrechnungsnr').textContent = result.abrechnungsnummer;
+
+            // Sum comparison
+            const gdiSum = result.gdi.versand_sum;
+            const amazonSum = result.amazon.gesamt_sum;
+            const diff = Math.abs(gdiSum - amazonSum);
+            const alertEl = document.getElementById('el-sum-comparison-alert');
+            const icon = document.getElementById('el-sum-comparison-icon');
+            const text = document.getElementById('el-sum-comparison-text');
+
+            if (diff < 0.01) {
+                alertEl.className = 'alert alert-success mt-4';
+                icon.className = 'bi bi-check-circle-fill me-2';
+                text.textContent = 'Die Summen stimmen überein!';
+            } else {
+                alertEl.className = 'alert alert-warning mt-4';
+                icon.className = 'bi bi-exclamation-triangle-fill me-2';
+                text.textContent = `Differenz: \u20AC${elFormatCurrency(diff)} (GDI: \u20AC${elFormatCurrency(gdiSum)}, Amazon: \u20AC${elFormatCurrency(amazonSum)})`;
+            }
+
+            // Build tables (with duplicate highlighting)
+            elBuildTable('el-gdi-table', result.gdi.sheet2_data, result.gdi.sheet2_columns, gdiSum, 'GESAMT');
+            elBuildTable('el-amazon-table', result.amazon.data, result.amazon.columns, amazonSum, 'Gesamt');
+            elBuildTable('el-gdi-sheet1-table', result.gdi.sheet1_data, result.gdi.sheet1_columns);
+
+            // Duplicates
+            const dups = result.duplicates;
+            if (dups && dups.count > 0) {
+                document.getElementById('el-duplicates-card').style.display = 'block';
+                document.getElementById('el-dup-order-count').textContent = dups.count;
+                document.getElementById('el-dup-amazon-rows').textContent = dups.duplicate_amazon_rows;
+                document.getElementById('el-dup-tab-li').style.display = 'list-item';
+                document.getElementById('el-dup-badge').textContent = dups.count;
+                elBuildDuplicateDetails(dups.orders, result.gdi.sheet2_columns, result.amazon.columns);
+            }
+
+            // Download links
+            document.getElementById('el-download-gdi').href = result.gdi.download_url;
+            document.getElementById('el-download-amazon').href = result.amazon.download_url;
+
+            // Show step 2
+            document.getElementById('el-step-1').style.display = 'none';
+            document.getElementById('el-step-2').style.display = 'block';
+        }
+
+        function elBuildTable(tableId, data, columns, sum, sumColumn) {
+            const table = document.getElementById(tableId);
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            const tfoot = table.querySelector('tfoot');
+
+            if (!columns || columns.length === 0 || !data || data.length === 0) {
+                thead.innerHTML = '';
+                tbody.innerHTML = '<tr><td class="text-muted text-center py-3">Keine Daten</td></tr>';
+                return;
+            }
+
+            thead.innerHTML = '<tr>' + columns.map(col => `<th class="text-nowrap small">${col}</th>`).join('') + '</tr>';
+            tbody.innerHTML = data.map(row => {
+                const isDup = row._is_duplicate === true || row._is_duplicate === 'True' || row._is_duplicate === true;
+                const cls = isDup ? ' class="table-warning"' : '';
+                return `<tr${cls}>` + columns.map(col =>
+                    `<td class="text-nowrap small">${row[col] !== null && row[col] !== undefined ? row[col] : ''}</td>`
+                ).join('') + '</tr>';
+            }).join('');
+
+            if (sum !== undefined && sum !== null && sumColumn && tfoot) {
+                const sumColIdx = columns.indexOf(sumColumn);
+                if (sumColIdx >= 0) {
+                    tfoot.innerHTML = '<tr>' + columns.map((col, idx) => {
+                        if (idx === sumColIdx) return `<td class="fw-bold">${elFormatCurrency(sum)}</td>`;
+                        return idx === 0 ? '<td class="fw-bold">SUMME</td>' : '<td></td>';
+                    }).join('') + '</tr>';
+                }
+            }
+        }
+
+        function elBuildDuplicateDetails(orders, gdiCols, amazonCols) {
+            const container = document.getElementById('el-dup-details');
+            let html = '';
+            orders.forEach(dup => {
+                html += `<div class="card mb-3 border-warning">
+                    <div class="card-header bg-warning-subtle">
+                        <strong>Bestellnummer: ${dup.order_id}</strong>
+                        <span class="ms-3 badge bg-warning text-dark">Amazon: ${dup.amazon_count} Zeilen</span>
+                        <span class="badge bg-success">GDI: ${dup.gdi_count} Zeile(n)</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="p-2 small fw-bold text-muted">Amazon CSV Zeilen:</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-warning mb-0">
+                                <thead><tr>${amazonCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
+                                <tbody>${dup.amazon_rows.map(row =>
+                                    '<tr>' + amazonCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
+                                ).join('')}</tbody>
+                            </table>
+                        </div>
+                        <div class="p-2 small fw-bold text-muted">GDI Excel Zeile(n):</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-success mb-0">
+                                <thead><tr>${gdiCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
+                                <tbody>${dup.gdi_rows.map(row =>
+                                    '<tr>' + gdiCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
+                                ).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function elFormatCurrency(value) {
+            return parseFloat(value).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function elShowToast(type, message) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            container.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        // Navigation
+        document.getElementById('el-back-to-step1').addEventListener('click', function() {
+            document.querySelector('[data-step="el-2"]').classList.remove('active');
+            document.querySelector('[data-step="el-1"]').classList.add('active');
+            document.getElementById('el-connector-1').classList.remove('completed');
+            document.getElementById('el-step-2').style.display = 'none';
+            document.getElementById('el-step-1').style.display = 'block';
+        });
+
+        document.getElementById('el-restart-btn').addEventListener('click', function() {
+            location.reload();
+        });
+    })();
+
+    // =========================================================================
+    // API Mode (existing flow)
+    // =========================================================================
     // Elements
     const uploadZone = document.getElementById('amazon-upload-zone');
     const fileInput = document.getElementById('amazon-csv-file');
