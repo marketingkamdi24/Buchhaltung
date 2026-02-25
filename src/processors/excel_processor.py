@@ -102,19 +102,17 @@ class ExcelProcessor:
             key = (row['bestellnummer'], row['typ'])
             groups[key].append(row)
         
+        # Types that should never be consolidated
+        no_consolidate_types = ('Rückerstattung', 'Einbehalt')
+        
         consolidated = []
         for key, rows in groups.items():
-            bestellnummer, typ = key
-            typ_str = str(typ) if typ else ''
-            
-            # Do NOT consolidate Rückerstattung or Einbehalt rows - keep them as separate rows
-            if 'ckerstattung' in typ_str or 'Rückerstattung' in typ_str or 'Einbehalt' in typ_str:
-                consolidated.extend(rows)
-                continue
-            
             if len(rows) == 1:
                 # No duplicates, keep as-is
                 consolidated.append(rows[0])
+            elif key[1] in no_consolidate_types:
+                # Never consolidate Rückerstattung or Einbehalt rows
+                consolidated.extend(rows)
             else:
                 # Multiple rows with same key - consolidate
                 # Find the summary row (has Transaktionsbetrag value)
@@ -208,6 +206,13 @@ class ExcelProcessor:
         output_file = None
         
         try:
+            # If file is CSV, convert to temp XLSX first (openpyxl requires .xlsx)
+            if file_path.lower().endswith('.csv'):
+                temp_df = pd.read_csv(file_path, sep=';', encoding='utf-8', header=None)
+                temp_xlsx = file_path.rsplit('.', 1)[0] + '.xlsx'
+                temp_df.to_excel(temp_xlsx, index=False, header=False, engine='openpyxl')
+                file_path = temp_xlsx
+            
             # Load the workbook
             wb = openpyxl.load_workbook(file_path)
             ws = wb.active

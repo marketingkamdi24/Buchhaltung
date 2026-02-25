@@ -350,14 +350,25 @@ Amazon Datenverarbeitung
                             </div>
                         </div>
                         
-                        <!-- API Data Table -->
+                        <!-- API Data Table (gdi-table-1: Versanddienstleistungen) -->
                         <div class="mt-4">
-                            <h5><i class="bi bi-cloud me-2"></i>API Daten (TYP=Versanddienstleistun)</h5>
+                            <h5><i class="bi bi-cloud me-2"></i>GDI-Tabelle 1 — API Daten (TYP=Versanddienstleistun)</h5>
                             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                                 <table class="table table-sm table-striped table-hover" id="api-data-table">
                                     <thead class="table-light sticky-top"></thead>
                                     <tbody></tbody>
                                     <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- GDI Table 2 (non-Versand with extra rows) -->
+                        <div class="mt-4" id="api-gdi-table2-section" style="display: none;">
+                            <h5><i class="bi bi-table me-2"></i>GDI-Tabelle 2 — Ohne Versanddienstleistungen</h5>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="api-gdi-table2">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
                                 </table>
                             </div>
                         </div>
@@ -439,7 +450,13 @@ Amazon Datenverarbeitung
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="api-tab" data-bs-toggle="tab" 
                                     data-bs-target="#api-table-panel" type="button" role="tab">
-                                <i class="bi bi-cloud me-1"></i>API Daten
+                                <i class="bi bi-cloud me-1"></i>GDI-Tabelle 1 (Versand)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation" id="gdi-table2-tab-li" style="display: none;">
+                            <button class="nav-link" id="gdi-table2-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#gdi-table2-panel" type="button" role="tab">
+                                <i class="bi bi-table me-1"></i>GDI-Tabelle 2
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -454,6 +471,13 @@ Amazon Datenverarbeitung
                                 <i class="bi bi-files me-1"></i>Duplikate <span class="badge bg-danger" id="dup-badge">0</span>
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation" id="api-comparison-tab-li" style="display: none;">
+                            <button class="nav-link" id="api-comparison-tab" data-bs-toggle="tab"
+                                    data-bs-target="#api-comparison-panel" type="button" role="tab">
+                                <i class="bi bi-arrow-left-right me-1"></i>Abgleich
+                                <span class="badge bg-info ms-1" id="api-comparison-badge">0</span>
+                            </button>
+                        </li>
                     </ul>
                     
                     <div class="tab-content mt-3" id="resultTabContent">
@@ -464,6 +488,16 @@ Amazon Datenverarbeitung
                                     <thead class="table-light sticky-top"></thead>
                                     <tbody></tbody>
                                     <tfoot class="table-dark"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- GDI Table 2 (non-Versand with extra rows) -->
+                        <div class="tab-pane fade" id="gdi-table2-panel" role="tabpanel">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover" id="gdi-table2-result">
+                                    <thead class="table-light sticky-top"></thead>
+                                    <tbody></tbody>
                                 </table>
                             </div>
                         </div>
@@ -491,6 +525,44 @@ Amazon Datenverarbeitung
                                     <thead class="table-light sticky-top"></thead>
                                     <tbody></tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        <!-- API Comparison / Abgleich Panel -->
+                        <div class="tab-pane fade" id="api-comparison-panel" role="tabpanel">
+                            <h6 class="mt-2">Zusammenfassung nach TYP</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="api-comparison-summary">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>TYP</th>
+                                            <th class="text-end">Amazon CSV</th>
+                                            <th class="text-end">GDI (API)</th>
+                                            <th class="text-end">Differenz</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-exclamation-triangle text-warning me-1"></i>In Amazon CSV, aber nicht in GDI</h6>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped" id="api-missing-in-gdi">
+                                            <thead class="table-warning sticky-top"><tr><th>TYP</th><th>Bestellnummer / ORDER_ID</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-exclamation-triangle text-info me-1"></i>In GDI, aber nicht in Amazon CSV</h6>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped" id="api-missing-in-amazon">
+                                            <thead class="table-info sticky-top"><tr><th>TYP</th><th>ORDER_ID</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -744,6 +816,13 @@ Amazon Datenverarbeitung
                                 <span class="badge bg-danger ms-1" id="el-dup-badge">0</span>
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation" id="el-comparison-tab-li" style="display: none;">
+                            <button class="nav-link" id="el-comparison-tab" data-bs-toggle="tab"
+                                    data-bs-target="#el-comparison-panel" type="button" role="tab">
+                                <i class="bi bi-arrow-left-right me-1"></i>Abgleich
+                                <span class="badge bg-info ms-1" id="el-comparison-badge">0</span>
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content mt-3" id="elResultTabContent">
@@ -783,6 +862,44 @@ Amazon Datenverarbeitung
                         <div class="tab-pane fade" id="el-dup-table-panel" role="tabpanel">
                             <div id="el-dup-details"></div>
                         </div>
+
+                        <!-- Comparison / Abgleich Panel -->
+                        <div class="tab-pane fade" id="el-comparison-panel" role="tabpanel">
+                            <h6 class="mt-2">Zusammenfassung nach TYP</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="el-comparison-summary">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>TYP</th>
+                                            <th class="text-end">Amazon CSV</th>
+                                            <th class="text-end">GDI</th>
+                                            <th class="text-end">Differenz</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-exclamation-triangle text-warning me-1"></i>In Amazon CSV, aber nicht in GDI</h6>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped" id="el-missing-in-gdi">
+                                            <thead class="table-warning sticky-top"><tr><th>TYP</th><th>Bestellnummer / ORDER_ID</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-exclamation-triangle text-info me-1"></i>In GDI, aber nicht in Amazon CSV</h6>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped" id="el-missing-in-amazon">
+                                            <thead class="table-info sticky-top"><tr><th>TYP</th><th>ORDER_ID</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Action Buttons -->
@@ -793,11 +910,8 @@ Amazon Datenverarbeitung
                         <button type="button" class="btn btn-outline-secondary flex-grow-1" id="el-restart-btn">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>Neu starten
                         </button>
-                        <a href="#" class="btn btn-success flex-grow-1" id="el-download-gdi" download>
-                            <i class="bi bi-download me-2"></i>GDI herunterladen
-                        </a>
-                        <a href="#" class="btn btn-warning flex-grow-1" id="el-download-amazon" download>
-                            <i class="bi bi-download me-2"></i>Amazon herunterladen
+                        <a href="#" class="btn btn-success flex-grow-1" id="el-download-all" download>
+                            <i class="bi bi-download me-2"></i>Ergebnisse herunterladen
                         </a>
                     </div>
                 </div>
@@ -1052,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Build tables (with duplicate highlighting)
             elBuildTable('el-gdi-table', result.gdi.sheet2_data, result.gdi.sheet2_columns, gdiSum, 'GESAMT');
             elBuildTable('el-amazon-table', result.amazon.data, result.amazon.columns, amazonSum, 'Gesamt');
-            elBuildTable('el-gdi-sheet1-table', result.gdi.sheet1_data, result.gdi.sheet1_columns);
+            elBuildTable('el-gdi-sheet1-table', result.gdi.sheet1_data, result.gdi.sheet1_columns, null, null, 2);
 
             // Duplicates
             const dups = result.duplicates;
@@ -1065,16 +1179,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 elBuildDuplicateDetails(dups.orders, result.gdi.sheet2_columns, result.amazon.columns);
             }
 
-            // Download links
-            document.getElementById('el-download-gdi').href = result.gdi.download_url;
-            document.getElementById('el-download-amazon').href = result.amazon.download_url;
+            // Comparison / Abgleich
+            const comp = result.comparison;
+            if (comp) {
+                const totalMissing = (comp.missing_in_gdi || []).length + (comp.missing_in_amazon || []).length;
+                const hasDiffs = (comp.typ_summary || []).some(r => r.difference !== 0);
+                if (hasDiffs || totalMissing > 0) {
+                    document.getElementById('el-comparison-tab-li').style.display = 'list-item';
+                    document.getElementById('el-comparison-badge').textContent = totalMissing;
+
+                    // TYP summary table
+                    const summaryBody = document.querySelector('#el-comparison-summary tbody');
+                    summaryBody.innerHTML = (comp.typ_summary || []).map(r => {
+                        const cls = r.difference !== 0 ? ' class="table-warning fw-bold"' : '';
+                        const diffStr = r.difference > 0 ? `+${r.difference}` : r.difference;
+                        return `<tr${cls}><td>${r.typ}</td><td class="text-end">${r.amazon_count}</td><td class="text-end">${r.gdi_count}</td><td class="text-end">${diffStr}</td></tr>`;
+                    }).join('');
+
+                    // Missing in GDI
+                    const migBody = document.querySelector('#el-missing-in-gdi tbody');
+                    migBody.innerHTML = (comp.missing_in_gdi || []).map(r =>
+                        `<tr><td>${r.typ}</td><td>${r.order_id}</td></tr>`
+                    ).join('') || '<tr><td colspan="2" class="text-muted">Keine fehlenden Zeilen</td></tr>';
+
+                    // Missing in Amazon
+                    const miaBody = document.querySelector('#el-missing-in-amazon tbody');
+                    miaBody.innerHTML = (comp.missing_in_amazon || []).map(r =>
+                        `<tr><td>${r.typ}</td><td>${r.order_id}</td></tr>`
+                    ).join('') || '<tr><td colspan="2" class="text-muted">Keine fehlenden Zeilen</td></tr>';
+                }
+            }
+
+            // Download link
+            document.getElementById('el-download-all').href = result.download_url;
 
             // Show step 2
             document.getElementById('el-step-1').style.display = 'none';
             document.getElementById('el-step-2').style.display = 'block';
         }
 
-        function elBuildTable(tableId, data, columns, sum, sumColumn) {
+        function elBuildTable(tableId, data, columns, sum, sumColumn, extraRowCount) {
             const table = document.getElementById(tableId);
             const thead = table.querySelector('thead');
             const tbody = table.querySelector('tbody');
@@ -1086,10 +1230,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const extraStart = extraRowCount ? data.length - extraRowCount : -1;
             thead.innerHTML = '<tr>' + columns.map(col => `<th class="text-nowrap small">${col}</th>`).join('') + '</tr>';
-            tbody.innerHTML = data.map(row => {
+            tbody.innerHTML = data.map((row, idx) => {
                 const isDup = row._is_duplicate === true || row._is_duplicate === 'True' || row._is_duplicate === true;
-                const cls = isDup ? ' class="table-warning"' : '';
+                const isExtra = extraStart >= 0 && idx >= extraStart;
+                const cls = isExtra ? ' class="table-info fw-bold"' : (isDup ? ' class="table-warning"' : '');
                 return `<tr${cls}>` + columns.map(col =>
                     `<td class="text-nowrap small">${row[col] !== null && row[col] !== undefined ? row[col] : ''}</td>`
                 ).join('') + '</tr>';
@@ -1110,31 +1256,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('el-dup-details');
             let html = '';
             orders.forEach(dup => {
+                const typLabel = dup.typ ? `<span class="badge bg-secondary ms-2">${dup.typ}</span>` : '';
+                // Derive columns from the actual rows if available (non-Versand may differ)
+                const dupAmazonCols = dup.amazon_rows.length > 0 ? Object.keys(dup.amazon_rows[0]) : amazonCols;
+                const dupGdiCols = dup.gdi_rows.length > 0 ? Object.keys(dup.gdi_rows[0]) : gdiCols;
+                const amazonSection = dup.amazon_rows.length > 0
+                    ? `<div class="table-responsive">
+                            <table class="table table-sm table-bordered table-warning mb-0">
+                                <thead><tr>${dupAmazonCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
+                                <tbody>${dup.amazon_rows.map(row =>
+                                    '<tr>' + dupAmazonCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
+                                ).join('')}</tbody>
+                            </table>
+                        </div>`
+                    : `<div class="p-2 text-muted small fst-italic">Keine Zeilen in Amazon CSV</div>`;
+                const gdiSection = dup.gdi_rows.length > 0
+                    ? `<div class="table-responsive">
+                            <table class="table table-sm table-bordered table-success mb-0">
+                                <thead><tr>${dupGdiCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
+                                <tbody>${dup.gdi_rows.map(row =>
+                                    '<tr>' + dupGdiCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
+                                ).join('')}</tbody>
+                            </table>
+                        </div>`
+                    : `<div class="p-2 text-muted small fst-italic">Keine Zeilen in GDI</div>`;
                 html += `<div class="card mb-3 border-warning">
                     <div class="card-header bg-warning-subtle">
-                        <strong>Bestellnummer: ${dup.order_id}</strong>
+                        <strong>Bestellnummer: ${dup.order_id}</strong>${typLabel}
                         <span class="ms-3 badge bg-warning text-dark">Amazon: ${dup.amazon_count} Zeilen</span>
                         <span class="badge bg-success">GDI: ${dup.gdi_count} Zeile(n)</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="p-2 small fw-bold text-muted">Amazon CSV Zeilen:</div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered table-warning mb-0">
-                                <thead><tr>${amazonCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
-                                <tbody>${dup.amazon_rows.map(row =>
-                                    '<tr>' + amazonCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
-                                ).join('')}</tbody>
-                            </table>
-                        </div>
+                        ${amazonSection}
                         <div class="p-2 small fw-bold text-muted">GDI Excel Zeile(n):</div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered table-success mb-0">
-                                <thead><tr>${gdiCols.map(c => `<th class="text-nowrap small">${c}</th>`).join('')}</tr></thead>
-                                <tbody>${dup.gdi_rows.map(row =>
-                                    '<tr>' + gdiCols.map(c => `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`).join('') + '</tr>'
-                                ).join('')}</tbody>
-                            </table>
-                        </div>
+                        ${gdiSection}
                     </div>
                 </div>`;
             });
@@ -1192,6 +1348,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let filteredCsvData = null;
     let apiData = null;
     let duplicates = [];
+    let gdi_table2Data = [];
+    let gdi_table2Columns = [];
+    let comparisonData = null;
     
     // File upload handling
     uploadZone.addEventListener('click', () => fileInput.click());
@@ -1353,6 +1512,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else if (data.type === 'complete') {
                                 apiData = data.api_data;
                                 duplicates = data.duplicates;
+                                gdi_table2Data = data.gdi_table2_data || [];
+                                gdi_table2Columns = data.gdi_table2_columns || [];
+                                comparisonData = data.comparison || null;
                                 
                                 document.getElementById('api-progress-bar').style.width = '100%';
                                 document.getElementById('api-progress-bar').classList.remove('progress-bar-animated');
@@ -1441,6 +1603,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                     buildTable('api-data-table', data.api_data, apiColumns, data.api_sum, 'GESAMT');
                                 }
                                 
+                                // Build GDI Table 2 (non-Versand with extra rows)
+                                if (data.gdi_table2_data && data.gdi_table2_data.length > 0 && data.gdi_table2_columns && data.gdi_table2_columns.length > 0) {
+                                    const t2 = document.getElementById('api-gdi-table2');
+                                    const t2Head = t2.querySelector('thead');
+                                    const t2Body = t2.querySelector('tbody');
+                                    t2Head.innerHTML = '<tr>' + data.gdi_table2_columns.map(c => `<th class="text-nowrap small">${c}</th>`).join('') + '</tr>';
+                                    t2Body.innerHTML = data.gdi_table2_data.map((row, idx) => {
+                                        const isExtra = idx >= data.gdi_table2_data.length - 2;
+                                        const cls = isExtra ? ' class="table-info fw-bold"' : '';
+                                        return `<tr${cls}>` + data.gdi_table2_columns.map(c =>
+                                            `<td class="text-nowrap small">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`
+                                        ).join('') + '</tr>';
+                                    }).join('');
+                                    document.getElementById('api-gdi-table2-section').style.display = 'block';
+                                }
+                                
                                 document.getElementById('api-fetch-progress').style.display = 'none';
                                 document.getElementById('api-result-summary').style.display = 'block';
                             } else if (data.type === 'error') {
@@ -1497,10 +1675,26 @@ document.addEventListener('DOMContentLoaded', function() {
             text.textContent = `Differenz: €${formatCurrency(diff)} (CSV: €${formatCurrency(csvSum)}, API: €${formatCurrency(apiSum)})`;
         }
         
-        // Build API table
+        // Build API table (gdi-table-1: Versand)
         if (apiData.length > 0) {
             const apiColumns = Object.keys(apiData[0]);
             buildTable('api-result-table', apiData, apiColumns, apiSum, 'GESAMT', duplicates.map(d => d.api_row));
+        }
+        
+        // Build GDI Table 2 (non-Versand with extra rows)
+        if (gdi_table2Data.length > 0 && gdi_table2Columns.length > 0) {
+            const t2 = document.getElementById('gdi-table2-result');
+            const t2Head = t2.querySelector('thead');
+            const t2Body = t2.querySelector('tbody');
+            t2Head.innerHTML = '<tr>' + gdi_table2Columns.map(c => `<th class="text-nowrap">${c}</th>`).join('') + '</tr>';
+            t2Body.innerHTML = gdi_table2Data.map((row, idx) => {
+                const isExtra = idx >= gdi_table2Data.length - 2;
+                const cls = isExtra ? ' class="table-info fw-bold"' : '';
+                return `<tr${cls}>` + gdi_table2Columns.map(c =>
+                    `<td class="text-nowrap">${row[c] !== null && row[c] !== undefined ? row[c] : ''}</td>`
+                ).join('') + '</tr>';
+            }).join('');
+            document.getElementById('gdi-table2-tab-li').style.display = 'list-item';
         }
         
         // Build CSV table
@@ -1513,6 +1707,34 @@ document.addEventListener('DOMContentLoaded', function() {
             const dupRows = duplicates.map(d => d.csv_row);
             const dupColumns = Object.keys(dupRows[0]);
             buildTable('duplicates-table', dupRows, dupColumns, null, null, null, true);
+        }
+        
+        // Comparison / Abgleich (API mode)
+        if (comparisonData) {
+            const comp = comparisonData;
+            const totalMissing = (comp.missing_in_gdi || []).length + (comp.missing_in_amazon || []).length;
+            const hasDiffs = (comp.typ_summary || []).some(r => r.difference !== 0);
+            if (hasDiffs || totalMissing > 0) {
+                document.getElementById('api-comparison-tab-li').style.display = 'list-item';
+                document.getElementById('api-comparison-badge').textContent = totalMissing;
+
+                const summaryBody = document.querySelector('#api-comparison-summary tbody');
+                summaryBody.innerHTML = (comp.typ_summary || []).map(r => {
+                    const cls = r.difference !== 0 ? ' class="table-warning fw-bold"' : '';
+                    const diffStr = r.difference > 0 ? `+${r.difference}` : r.difference;
+                    return `<tr${cls}><td>${r.typ}</td><td class="text-end">${r.amazon_count}</td><td class="text-end">${r.gdi_count}</td><td class="text-end">${diffStr}</td></tr>`;
+                }).join('');
+
+                const migBody = document.querySelector('#api-missing-in-gdi tbody');
+                migBody.innerHTML = (comp.missing_in_gdi || []).map(r =>
+                    `<tr><td>${r.typ}</td><td>${r.order_id}</td></tr>`
+                ).join('') || '<tr><td colspan="2" class="text-muted">Keine fehlenden Zeilen</td></tr>';
+
+                const miaBody = document.querySelector('#api-missing-in-amazon tbody');
+                miaBody.innerHTML = (comp.missing_in_amazon || []).map(r =>
+                    `<tr><td>${r.typ}</td><td>${r.order_id}</td></tr>`
+                ).join('') || '<tr><td colspan="2" class="text-muted">Keine fehlenden Zeilen</td></tr>';
+            }
         }
     }
     
@@ -1644,7 +1866,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     csv_data: filteredCsvData,
                     api_data: apiData,
                     duplicates: duplicates,
-                    abrechnungsnummer: abrechnungsnummerInput.value.trim()
+                    abrechnungsnummer: abrechnungsnummerInput.value.trim(),
+                    gdi_table2_data: gdi_table2Data,
+                    gdi_table2_columns: gdi_table2Columns
                 })
             });
             

@@ -67,11 +67,21 @@ class DataMatcher:
             # Load shop file
             results.append(f"📄 Loading shop file: {os.path.basename(shop_file_path)}")
             try:
-                shop_df = pd.read_excel(
-                    shop_file_path,
-                    engine='openpyxl',
-                    header=self.config.shop_data_header_row
-                )
+                ext = os.path.splitext(shop_file_path)[1].lower()
+                print(f"[DEBUG-MATCHER-V2] path={shop_file_path}, ext='{ext}'", flush=True)
+                if ext == '.csv':
+                    shop_df = pd.read_csv(
+                        shop_file_path,
+                        sep=';',
+                        header=self.config.shop_data_header_row,
+                        encoding='utf-8'
+                    )
+                else:
+                    shop_df = pd.read_excel(
+                        shop_file_path,
+                        engine='openpyxl',
+                        header=self.config.shop_data_header_row
+                    )
                 results.append(f"✅ Loaded {len(shop_df)} rows from shop file")
             except Exception as e:
                 return MatchResult(

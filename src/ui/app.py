@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import uuid
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from functools import wraps
@@ -448,6 +449,7 @@ def api_process_data():
         try:
             matcher = DataMatcher()
             result = matcher.match_and_process(api_data, str(temp_path))
+            print(f"[DEBUG-APP-V2] success={result.success}, msg={result.message[:500]}", flush=True)
             
             # Clean up temp file
             if temp_path.exists():
@@ -711,6 +713,47 @@ def check_api_data():
 # Amazon Processing API Endpoints
 # ============================================================================
 
+def extract_month_from_csv_filename(filename):
+    """Extract YYYYMM from CSV filename like '2025Nov13-2025Nov17CustomTransaction AZ Website.csv'."""
+    month_map = {
+        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+    }
+    match = re.match(r'(\d{4})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', filename)
+    if match:
+        year = match.group(1)
+        month = month_map[match.group(2)]
+        return f"{year}{month}"
+    return ''
+
+
+def find_col(df, name):
+    """Find column name case-insensitively in DataFrame."""
+    for col in df.columns:
+        if col.upper() == name.upper():
+            return col
+    return None
+
+
+def format_accounting_date(value):
+    """Convert ACCOUNTING date from 'DD.MM.YYYY HH:MM:SS' or datetime to 'MM/DD/YYYY'."""
+    if value is None or value == '':
+        return value
+    s = str(value).strip()
+    # Try DD.MM.YYYY HH:MM:SS or DD.MM.YYYY
+    match = re.match(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', s)
+    if match:
+        day, month, year = match.group(1), match.group(2), match.group(3)
+        return f"{int(month)}/{int(day)}/{year}"
+    # Try YYYY-MM-DD (ISO format from datetime)
+    match = re.match(r'(\d{4})-(\d{1,2})-(\d{1,2})', s)
+    if match:
+        year, month, day = match.group(1), match.group(2), match.group(3)
+        return f"{int(month)}/{int(day)}/{year}"
+    return s
+
+
 @app.route('/api/amazon/process-csv', methods=['POST'])
 @login_required
 def api_amazon_process_csv():
@@ -756,9 +799,16 @@ def api_amazon_process_csv():
         columns = list(filtered_df.columns)
         filtered_data = filtered_df.fillna('').to_dict('records')
         
+        # Store ALL rows for this Abrechnungsnummer (for comparison later)
+        all_for_abrechnungsnr = df[
+            df['Abrechnungsnummer'].astype(str) == str(abrechnungsnummer)
+        ].fillna('').to_dict('records')
+        
         # Store in session for later use
         session['amazon_csv_data'] = filtered_data
+        session['amazon_csv_all'] = all_for_abrechnungsnr
         session['amazon_abrechnungsnummer'] = abrechnungsnummer
+        session['amazon_csv_filename'] = file.filename
         
         return jsonify({
             'success': True,
@@ -790,6 +840,8 @@ def api_amazon_fetch_api_data():
     abrechnungsnummer = data.get('abrechnungsnummer', '')
     bestellnummern = data.get('bestellnummern', [])
     csv_data = session.get('amazon_csv_data', [])
+    csv_all = session.get('amazon_csv_all', [])
+    csv_filename = session.get('amazon_csv_filename', '')
     
     # Remove duplicates while preserving order
     unique_bestellnummern = list(dict.fromkeys(bestellnummern))
@@ -799,6 +851,7 @@ def api_amazon_fetch_api_data():
             yield f"data: {json.dumps({'type': 'init', 'total': len(unique_bestellnummern)})}\n\n"
             
             api_results = []
+            non_versand_results = []  # Non-Versand entries (gdi-table-2)
             api_errors = []  # Track API errors
             orders_no_data = []  # Track orders with no matching data
             
@@ -841,11 +894,16 @@ def api_amazon_fetch_api_data():
                         found_match = False
                         for entry in entries:
                             if isinstance(entry, dict):
+                                # Reformat ACCOUNTING date
+                                if 'ACCOUNTING' in entry:
+                                    entry['ACCOUNTING'] = format_accounting_date(entry['ACCOUNTING'])
                                 typ = str(entry.get('TYP', '')).strip()
                                 
                                 if typ == 'Versanddienstleistun':
                                     api_results.append(entry)
                                     found_match = True
+                                else:
+                                    non_versand_results.append(entry)
                         
                         if not found_match:
                             # Count how many times this order appears in CSV
@@ -930,7 +988,133 @@ def api_amazon_fetch_api_data():
             # Calculate API sum INCLUDING duplicated rows
             api_sum = sum(float(row.get('GESAMT', 0)) for row in api_results_with_duplicates)
             
-            yield f"data: {json.dumps({'type': 'complete', 'api_data': api_results_with_duplicates, 'duplicates': duplicates, 'csv_duplicates': csv_duplicates_list, 'api_sum': api_sum, 'api_errors': api_errors, 'orders_no_data': orders_no_data, 'stats': {'total_orders': len(unique_bestellnummern), 'api_matches': len(api_results), 'api_with_dups': len(api_results_with_duplicates), 'errors': len(api_errors), 'no_data': len(orders_no_data), 'csv_duplicate_rows': len(csv_duplicates_list)}})}\n\n"
+            # --- Detect non-Versand duplicates (API mode) ---
+            # Get non-Versand rows from csv_all
+            csv_non_versand = [r for r in csv_all if not str(r.get('Typ', '')).lower().startswith('versanddienstleistung')]
+            if csv_non_versand or non_versand_results:
+                nv_csv_by_bn = {}
+                for row in csv_non_versand:
+                    bn = str(row.get('Bestellnummer', ''))
+                    nv_csv_by_bn.setdefault(bn, []).append(row)
+                nv_api_by_bn = {}
+                for row in non_versand_results:
+                    bn = str(row.get('ORDER_ID', ''))
+                    nv_api_by_bn.setdefault(bn, []).append(row)
+                nv_all_bns = set(nv_csv_by_bn.keys()) | set(nv_api_by_bn.keys())
+                for bn in sorted(nv_all_bns):
+                    csv_rows_nv = nv_csv_by_bn.get(bn, [])
+                    api_rows_nv = nv_api_by_bn.get(bn, [])
+                    if len(csv_rows_nv) != len(api_rows_nv):
+                        typ_display = ''
+                        if csv_rows_nv:
+                            typ_display = str(csv_rows_nv[0].get('Typ', '')).strip()
+                        elif api_rows_nv:
+                            typ_display = str(api_rows_nv[0].get('TYP', '')).strip()
+                        duplicates.append({
+                            'bestellnummer': bn,
+                            'typ': typ_display or 'Andere',
+                            'csv_row': csv_rows_nv[0] if csv_rows_nv else {},
+                            'api_row': api_rows_nv[0] if api_rows_nv else {},
+                            'reason': f'CSV hat {len(csv_rows_nv)} Zeilen, API hat {len(api_rows_nv)} ({typ_display})'
+                        })
+            
+            # --- Build gdi-table-2 (non-Versand) with extra rows ---
+            month_code = extract_month_from_csv_filename(csv_filename)
+            
+            # Calculate Gebuehren sum from non-Versand entries
+            gebuehren_sum = 0.0
+            for row in non_versand_results:
+                val = row.get('GEBUEHREN', row.get('Gebuehren', 0))
+                try:
+                    gebuehren_sum += float(val) if val else 0.0
+                except (ValueError, TypeError):
+                    pass
+            
+            # Determine columns for gdi-table-2 (fallback to api_results columns if no non-Versand data)
+            gdi_table2_columns = []
+            if non_versand_results:
+                gdi_table2_columns = [k for k in non_versand_results[0].keys() if not k.startswith('_')]
+            elif api_results:
+                gdi_table2_columns = [k for k in api_results[0].keys() if not k.startswith('_')]
+
+            # Build extra rows for gdi-table-2
+            # Row 1: Versand - sum from gdi-table-1 in GESAMT and AMAZON_BRUTTO
+            versand_extra = {col: '' for col in gdi_table2_columns}
+            for col in gdi_table2_columns:
+                cu = col.upper()
+                if cu == 'GESAMT':
+                    versand_extra[col] = api_sum
+                elif cu == 'AMAZON_BRUTTO':
+                    versand_extra[col] = api_sum
+                elif cu == 'BELEGNR_GDI':
+                    versand_extra[col] = month_code
+                elif cu == 'KUNDENNR':
+                    versand_extra[col] = '7000029'
+                elif cu == 'KUNDE':
+                    versand_extra[col] = 'Versand'
+            
+            # Row 2: Gebuehr - sum of Gebuehren in GEBUEHREN and AMAZON_BRUTTO
+            gebuehr_extra = {col: '' for col in gdi_table2_columns}
+            for col in gdi_table2_columns:
+                cu = col.upper()
+                if cu == 'GEBUEHREN':
+                    gebuehr_extra[col] = gebuehren_sum
+                elif cu == 'AMAZON_BRUTTO':
+                    gebuehr_extra[col] = gebuehren_sum
+                elif cu == 'BELEGNR_GDI':
+                    gebuehr_extra[col] = month_code
+                elif cu == 'KUNDENNR':
+                    gebuehr_extra[col] = '7000422'
+                elif cu == 'KUNDE':
+                    gebuehr_extra[col] = 'Gebuehr'
+            
+            # Append extra rows to non-Versand data
+            gdi_table2_data = list(non_versand_results) + [versand_extra, gebuehr_extra]
+            
+            # --- Build comparison between Amazon CSV and API data by (ABRECHNUNGSNR, TYP) ---
+            def normalize_typ(val):
+                return str(val).strip()[:20].lower()
+            
+            # Group ALL Amazon CSV rows by normalized Typ
+            amazon_by_typ = {}
+            for row in csv_all:
+                typ_raw = str(row.get('Typ', '')).strip()
+                typ_norm = normalize_typ(typ_raw)
+                oid = str(row.get('Bestellnummer', '')).strip()
+                if typ_norm not in amazon_by_typ:
+                    amazon_by_typ[typ_norm] = {'typ_display': typ_raw, 'count': 0, 'order_ids': []}
+                amazon_by_typ[typ_norm]['count'] += 1
+                amazon_by_typ[typ_norm]['order_ids'].append(oid)
+            
+            # Group ALL API results (Versand + non-Versand) by normalized TYP
+            all_api_entries = list(api_results_with_duplicates) + list(non_versand_results)
+            gdi_by_typ = {}
+            for row in all_api_entries:
+                typ_raw = str(row.get('TYP', '')).strip()
+                typ_norm = normalize_typ(typ_raw)
+                oid = str(row.get('ORDER_ID', '')).strip()
+                if typ_norm not in gdi_by_typ:
+                    gdi_by_typ[typ_norm] = {'typ_display': typ_raw, 'count': 0, 'order_ids': []}
+                gdi_by_typ[typ_norm]['count'] += 1
+                gdi_by_typ[typ_norm]['order_ids'].append(oid)
+            
+            all_typ_norms = sorted(set(list(amazon_by_typ.keys()) + list(gdi_by_typ.keys())))
+            typ_comparison = []
+            missing_in_gdi = []
+            missing_in_amazon = []
+            for tn in all_typ_norms:
+                amz = amazon_by_typ.get(tn, {'typ_display': '', 'count': 0, 'order_ids': []})
+                gdi = gdi_by_typ.get(tn, {'typ_display': '', 'count': 0, 'order_ids': []})
+                td = amz['typ_display'] or gdi['typ_display']
+                typ_comparison.append({'typ': td, 'amazon_count': amz['count'], 'gdi_count': gdi['count'], 'difference': amz['count'] - gdi['count']})
+                for oid in sorted(set(amz['order_ids']) - set(gdi['order_ids'])):
+                    missing_in_gdi.append({'typ': td, 'order_id': oid})
+                for oid in sorted(set(gdi['order_ids']) - set(amz['order_ids'])):
+                    missing_in_amazon.append({'typ': td, 'order_id': oid})
+            
+            comparison = {'typ_summary': typ_comparison, 'missing_in_gdi': missing_in_gdi, 'missing_in_amazon': missing_in_amazon}
+            
+            yield f"data: {json.dumps({'type': 'complete', 'api_data': api_results_with_duplicates, 'gdi_table2_data': gdi_table2_data, 'gdi_table2_columns': gdi_table2_columns, 'gebuehren_sum': gebuehren_sum, 'month_code': month_code, 'duplicates': duplicates, 'csv_duplicates': csv_duplicates_list, 'api_sum': api_sum, 'api_errors': api_errors, 'orders_no_data': orders_no_data, 'comparison': comparison, 'stats': {'total_orders': len(unique_bestellnummern), 'api_matches': len(api_results), 'api_with_dups': len(api_results_with_duplicates), 'non_versand_count': len(non_versand_results), 'errors': len(api_errors), 'no_data': len(orders_no_data), 'csv_duplicate_rows': len(csv_duplicates_list)}})}\n\n"
             
         except Exception as e:
             import traceback
@@ -959,6 +1143,11 @@ def api_amazon_process_excel_list():
         
         # --- Process GDI Excel ---
         gdi_df = pd.read_excel(gdi_file, engine='openpyxl')
+        
+        # Reformat ACCOUNTING date column
+        accounting_col = find_col(gdi_df, 'ACCOUNTING')
+        if accounting_col:
+            gdi_df[accounting_col] = gdi_df[accounting_col].apply(format_accounting_date)
         
         # Column manipulation: Move KUNDENNR from between ORDER_ID/KUNDE to between KUNDE/BELEGNR_GDI
         # This simulates: Insert col before H, move F(KUNDENNR) to H, delete original F
@@ -1030,20 +1219,172 @@ def api_amazon_process_excel_list():
         gdi_sheet2 = gdi_sheet2.copy()
         gdi_sheet2['_is_duplicate'] = gdi_sheet2['ORDER_ID'].astype(str).isin(duplicate_orders)
         
-        # Build duplicate detail list
+        # Build duplicate detail list (Versand)
         duplicate_rows = []
         for order_id in sorted(duplicate_orders):
             amz_rows = amazon_filtered[amazon_filtered['Bestellnummer'].astype(str) == order_id]
             gdi_rows = gdi_sheet2[gdi_sheet2['ORDER_ID'].astype(str) == order_id]
             duplicate_rows.append({
                 'order_id': order_id,
+                'typ': 'Versanddienstleistungen',
                 'amazon_count': len(amz_rows),
                 'gdi_count': len(gdi_rows),
                 'amazon_rows': amz_rows.drop(columns=['_is_duplicate']).fillna('').to_dict('records'),
                 'gdi_rows': gdi_rows.drop(columns=['_is_duplicate']).fillna('').to_dict('records')
             })
         
-        # --- Save processed files ---
+        # --- Detect non-Versand duplicates ---
+        # Get Amazon non-Versand rows for this Abrechnungsnummer
+        amazon_non_versand = amazon_df[
+            (amazon_df['Abrechnungsnummer'].astype(str) == str(abrechnungsnummer)) &
+            (~amazon_df['Typ'].astype(str).str.contains('Versanddienstleistung', case=False, na=False))
+        ].copy()
+        
+        if not amazon_non_versand.empty or not gdi_sheet1.empty:
+            nv_amazon_order_counts = amazon_non_versand['Bestellnummer'].astype(str).value_counts() if not amazon_non_versand.empty else pd.Series(dtype=int)
+            nv_gdi_order_counts = gdi_sheet1['ORDER_ID'].astype(str).value_counts() if not gdi_sheet1.empty else pd.Series(dtype=int)
+            
+            nv_duplicate_orders = set()
+            for order_id, amazon_count in nv_amazon_order_counts.items():
+                gdi_count = nv_gdi_order_counts.get(order_id, 0)
+                if amazon_count != gdi_count:
+                    nv_duplicate_orders.add(str(order_id))
+            # Also check GDI orders not in Amazon
+            for order_id, gdi_count in nv_gdi_order_counts.items():
+                amazon_count = nv_amazon_order_counts.get(order_id, 0)
+                if gdi_count != amazon_count:
+                    nv_duplicate_orders.add(str(order_id))
+            
+            gdi_sheet1_cols_for_dup = [c for c in gdi_sheet1.columns if not c.startswith('_')] if not gdi_sheet1.empty else []
+            
+            for order_id in sorted(nv_duplicate_orders):
+                amz_rows = amazon_non_versand[amazon_non_versand['Bestellnummer'].astype(str) == order_id] if not amazon_non_versand.empty else pd.DataFrame()
+                gdi_rows = gdi_sheet1[gdi_sheet1['ORDER_ID'].astype(str) == order_id] if not gdi_sheet1.empty else pd.DataFrame()
+                # Determine the Typ from Amazon rows (or GDI TYP)
+                typ_display = ''
+                if not amz_rows.empty:
+                    typ_display = str(amz_rows.iloc[0].get('Typ', '')).strip()
+                elif not gdi_rows.empty:
+                    typ_display = str(gdi_rows.iloc[0].get('TYP', '')).strip()
+                
+                duplicate_rows.append({
+                    'order_id': order_id,
+                    'typ': typ_display or 'Andere',
+                    'amazon_count': len(amz_rows),
+                    'gdi_count': len(gdi_rows),
+                    'amazon_rows': amz_rows.fillna('').to_dict('records') if not amz_rows.empty else [],
+                    'gdi_rows': gdi_rows[gdi_sheet1_cols_for_dup].fillna('').to_dict('records') if (not gdi_rows.empty and gdi_sheet1_cols_for_dup) else []
+                })
+            
+            duplicate_orders = duplicate_orders | nv_duplicate_orders
+        
+        # --- Build gdi-table-2 (gdi_sheet1 / non-Versand) with extra rows ---
+        month_code = extract_month_from_csv_filename(csv_file.filename)
+        gdi_sheet1_export_cols = [c for c in gdi_sheet1.columns if not c.startswith('_')]
+        
+        # Calculate Gebuehren sum from gdi_sheet1 (non-Versand)
+        gebuehren_col = find_col(gdi_sheet1, 'GEBUEHREN')
+        gebuehren_sum = 0.0
+        if gebuehren_col:
+            gebuehren_sum = float(pd.to_numeric(gdi_sheet1[gebuehren_col], errors='coerce').sum())
+        
+        # Row 1: Versand - sum from gdi-table-1 in GESAMT and AMAZON_BRUTTO
+        versand_extra = {col: '' for col in gdi_sheet1_export_cols}
+        for col in gdi_sheet1_export_cols:
+            cu = col.upper()
+            if cu == 'GESAMT':
+                versand_extra[col] = gdi_versand_sum
+            elif cu == 'AMAZON_BRUTTO':
+                versand_extra[col] = gdi_versand_sum
+            elif cu == 'BELEGNR_GDI':
+                versand_extra[col] = month_code
+            elif cu == 'KUNDENNR':
+                versand_extra[col] = '7000029'
+            elif cu == 'KUNDE':
+                versand_extra[col] = 'Versand'
+        
+        # Row 2: Gebuehr - sum of Gebuehren in GEBUEHREN and AMAZON_BRUTTO
+        gebuehr_extra = {col: '' for col in gdi_sheet1_export_cols}
+        for col in gdi_sheet1_export_cols:
+            cu = col.upper()
+            if cu == 'GEBUEHREN':
+                gebuehr_extra[col] = gebuehren_sum
+            elif cu == 'AMAZON_BRUTTO':
+                gebuehr_extra[col] = gebuehren_sum
+            elif cu == 'BELEGNR_GDI':
+                gebuehr_extra[col] = month_code
+            elif cu == 'KUNDENNR':
+                gebuehr_extra[col] = '7000422'
+            elif cu == 'KUNDE':
+                gebuehr_extra[col] = 'Gebuehr'
+        
+        # Append extra rows to gdi_sheet1
+        gdi_sheet1_with_extras = pd.concat(
+            [gdi_sheet1[gdi_sheet1_export_cols], pd.DataFrame([versand_extra, gebuehr_extra])],
+            ignore_index=True
+        )
+        
+        # --- Build comparison between Amazon CSV and GDI by (ABRECHNUNGSNR, TYP) ---
+        # Get ALL Amazon CSV rows for this Abrechnungsnummer (not just Versand)
+        amazon_all_for_abrechnungsnr = amazon_df[
+            amazon_df['Abrechnungsnummer'].astype(str) == str(abrechnungsnummer)
+        ].copy()
+        
+        # Normalize TYP for matching (GDI may truncate, e.g. "Versanddienstleistun" vs "Versanddienstleistungen")
+        def normalize_typ(val):
+            return str(val).strip()[:20].lower()
+        
+        # Group Amazon by normalized Typ with ORDER_IDs
+        amazon_by_typ = {}
+        for _, row in amazon_all_for_abrechnungsnr.iterrows():
+            typ_raw = str(row.get('Typ', '')).strip()
+            typ_norm = normalize_typ(typ_raw)
+            order_id = str(row.get('Bestellnummer', '')).strip()
+            if typ_norm not in amazon_by_typ:
+                amazon_by_typ[typ_norm] = {'typ_display': typ_raw, 'count': 0, 'order_ids': []}
+            amazon_by_typ[typ_norm]['count'] += 1
+            amazon_by_typ[typ_norm]['order_ids'].append(order_id)
+        
+        # Group full GDI (before split) by normalized TYP with ORDER_IDs
+        gdi_by_typ = {}
+        for _, row in gdi_df.iterrows():
+            typ_raw = str(row.get('TYP', '')).strip()
+            typ_norm = normalize_typ(typ_raw)
+            order_id = str(row.get('ORDER_ID', '')).strip()
+            if typ_norm not in gdi_by_typ:
+                gdi_by_typ[typ_norm] = {'typ_display': typ_raw, 'count': 0, 'order_ids': []}
+            gdi_by_typ[typ_norm]['count'] += 1
+            gdi_by_typ[typ_norm]['order_ids'].append(order_id)
+        
+        # Build comparison results
+        all_typ_norms = sorted(set(list(amazon_by_typ.keys()) + list(gdi_by_typ.keys())))
+        typ_comparison = []
+        missing_in_gdi = []
+        missing_in_amazon = []
+        
+        for typ_norm in all_typ_norms:
+            amz = amazon_by_typ.get(typ_norm, {'typ_display': '', 'count': 0, 'order_ids': []})
+            gdi = gdi_by_typ.get(typ_norm, {'typ_display': '', 'count': 0, 'order_ids': []})
+            
+            typ_display = amz['typ_display'] or gdi['typ_display']
+            
+            typ_comparison.append({
+                'typ': typ_display,
+                'amazon_count': amz['count'],
+                'gdi_count': gdi['count'],
+                'difference': amz['count'] - gdi['count']
+            })
+            
+            # Find specific ORDER_IDs present in one but not the other
+            amz_order_set = set(amz['order_ids'])
+            gdi_order_set = set(gdi['order_ids'])
+            
+            for oid in sorted(amz_order_set - gdi_order_set):
+                missing_in_gdi.append({'typ': typ_display, 'order_id': oid})
+            for oid in sorted(gdi_order_set - amz_order_set):
+                missing_in_amazon.append({'typ': typ_display, 'order_id': oid})
+        
+        # --- Save combined Excel file with all tables ---
         config = get_config()
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
@@ -1051,14 +1392,14 @@ def api_amazon_process_excel_list():
         gdi_export_cols = [c for c in gdi_sheet2.columns if not c.startswith('_')]
         amazon_export_cols = [c for c in amazon_filtered.columns if not c.startswith('_')]
         
-        # Save GDI Excel with two sheets
-        gdi_output_filename = f"gdi_bearbeitet_{abrechnungsnummer}_{timestamp}.xlsx"
-        gdi_output_path = config.app.output_dir / gdi_output_filename
+        output_filename = f"amazon_ergebnis_{abrechnungsnummer}_{timestamp}.xlsx"
+        output_path = config.app.output_dir / output_filename
         
-        gdi_sheet1_export_cols = [c for c in gdi_sheet1.columns if not c.startswith('_')]
-        with pd.ExcelWriter(str(gdi_output_path), engine='openpyxl') as writer:
-            gdi_sheet1[gdi_sheet1_export_cols].to_excel(writer, sheet_name='Tabellenblatt1', index=False)
-            # Sheet 2 with sum row
+        with pd.ExcelWriter(str(output_path), engine='openpyxl') as writer:
+            # Sheet 1: GDI ohne Versand (gdi-table-2) with Versand+Gebuehr extra rows
+            gdi_sheet1_with_extras.to_excel(writer, sheet_name='GDI ohne Versand', index=False)
+            
+            # Sheet 2: Versanddienstleistungen (gdi-table-1) with sum row
             gdi_s2_export = gdi_sheet2[gdi_export_cols].copy()
             sum_row = {col: '' for col in gdi_export_cols}
             sum_row['GESAMT'] = gdi_versand_sum
@@ -1066,23 +1407,20 @@ def api_amazon_process_excel_list():
                 sum_row[gdi_export_cols[0]] = 'SUMME'
             gdi_s2_export = pd.concat([gdi_s2_export, pd.DataFrame([sum_row])], ignore_index=True)
             gdi_s2_export.to_excel(writer, sheet_name='Versanddienstleistungen', index=False)
-        
-        # Save Amazon filtered data
-        amazon_output_filename = f"amazon_versand_{abrechnungsnummer}_{timestamp}.xlsx"
-        amazon_output_path = config.app.output_dir / amazon_output_filename
-        
-        amazon_export = amazon_filtered[amazon_export_cols].copy()
-        sum_row = {col: '' for col in amazon_export_cols}
-        sum_row['Gesamt'] = amazon_gesamt_sum
-        if len(amazon_export_cols) > 0:
-            sum_row[amazon_export_cols[0]] = 'SUMME'
-        amazon_export = pd.concat([amazon_export, pd.DataFrame([sum_row])], ignore_index=True)
-        amazon_export.to_excel(str(amazon_output_path), index=False)
+            
+            # Sheet 3: Amazon CSV data with sum row
+            amazon_export = amazon_filtered[amazon_export_cols].copy()
+            sum_row = {col: '' for col in amazon_export_cols}
+            sum_row['Gesamt'] = amazon_gesamt_sum
+            if len(amazon_export_cols) > 0:
+                sum_row[amazon_export_cols[0]] = 'SUMME'
+            amazon_export = pd.concat([amazon_export, pd.DataFrame([sum_row])], ignore_index=True)
+            amazon_export.to_excel(writer, sheet_name='Amazon CSV', index=False)
         
         # --- Prepare response data ---
         # Include _is_duplicate flag for frontend highlighting
         gdi_sheet2_records = gdi_sheet2.fillna('').to_dict('records')
-        gdi_sheet1_records = gdi_sheet1.head(50).fillna('').to_dict('records')
+        gdi_sheet1_records = gdi_sheet1_with_extras.fillna('').to_dict('records')
         amazon_records = amazon_filtered.fillna('').to_dict('records')
         
         return jsonify({
@@ -1092,34 +1430,40 @@ def api_amazon_process_excel_list():
                 'sheet1_count': len(gdi_sheet1),
                 'sheet2_count': len(gdi_sheet2),
                 'versand_sum': gdi_versand_sum,
+                'gebuehren_sum': gebuehren_sum,
+                'month_code': month_code,
                 'sheet2_data': gdi_sheet2_records,
                 'sheet2_columns': gdi_export_cols,
                 'sheet1_data': gdi_sheet1_records,
-                'sheet1_columns': [c for c in gdi_sheet1.columns if not c.startswith('_')],
-                'download_url': f'/api/download/{gdi_output_filename}'
+                'sheet1_columns': gdi_sheet1_export_cols
             },
             'amazon': {
                 'row_count': len(amazon_filtered),
                 'gesamt_sum': amazon_gesamt_sum,
                 'data': amazon_records,
-                'columns': amazon_export_cols,
-                'download_url': f'/api/download/{amazon_output_filename}'
+                'columns': amazon_export_cols
             },
             'duplicates': {
-                'count': len(duplicate_orders),
+                'count': len(duplicate_rows),
                 'duplicate_amazon_rows': int(amazon_filtered['_is_duplicate'].sum()),
                 'orders': duplicate_rows
             },
-            'abrechnungsnummer': abrechnungsnummer
+            'abrechnungsnummer': abrechnungsnummer,
+            'download_url': f'/api/download/{output_filename}',
+            'comparison': {
+                'typ_summary': typ_comparison,
+                'missing_in_gdi': missing_in_gdi,
+                'missing_in_amazon': missing_in_amazon
+            }
         })
         
     except Exception as e:
         import traceback
+
         return jsonify({
             'success': False,
             'message': f'Fehler: {str(e)}\n{traceback.format_exc()}'
         })
-
 
 @app.route('/api/amazon/download-results', methods=['POST'])
 @login_required
@@ -1131,6 +1475,8 @@ def api_amazon_download_results():
         api_data = data.get('api_data', [])
         duplicates = data.get('duplicates', [])
         abrechnungsnummer = data.get('abrechnungsnummer', '')
+        gdi_table2_data = data.get('gdi_table2_data', [])
+        gdi_table2_columns = data.get('gdi_table2_columns', [])
         
         # Create Excel file with multiple sheets
         config = get_config()
@@ -1149,16 +1495,27 @@ def api_amazon_download_results():
                     df_csv = pd.concat([df_csv, pd.DataFrame([sum_row])], ignore_index=True)
                 df_csv.to_excel(writer, sheet_name='CSV_Daten', index=False)
             
-            # API Data sheet
+            # API Data sheet (gdi-table-1: Versanddienstleistungen)
             if api_data:
                 df_api = pd.DataFrame(api_data)
+                # Remove internal columns
+                export_cols = [c for c in df_api.columns if not c.startswith('_')]
+                df_api = df_api[export_cols]
                 # Add sum row
                 if 'GESAMT' in df_api.columns:
                     sum_row = {col: '' for col in df_api.columns}
                     sum_row[df_api.columns[0]] = 'SUMME'
-                    sum_row['GESAMT'] = df_api['GESAMT'].astype(float).sum()
+                    sum_row['GESAMT'] = pd.to_numeric(df_api['GESAMT'], errors='coerce').sum()
                     df_api = pd.concat([df_api, pd.DataFrame([sum_row])], ignore_index=True)
-                df_api.to_excel(writer, sheet_name='API_Daten', index=False)
+                df_api.to_excel(writer, sheet_name='Versanddienstleistungen', index=False)
+            
+            # GDI Table 2 sheet (non-Versand with extra rows)
+            if gdi_table2_data:
+                if gdi_table2_columns:
+                    df_t2 = pd.DataFrame(gdi_table2_data, columns=gdi_table2_columns)
+                else:
+                    df_t2 = pd.DataFrame(gdi_table2_data)
+                df_t2.to_excel(writer, sheet_name='GDI_Tabelle2', index=False)
             
             # Duplicates sheet
             if duplicates:
