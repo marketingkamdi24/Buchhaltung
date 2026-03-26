@@ -7,6 +7,14 @@
 eBay Datenverarbeitung
 {% endblock %}
 
+{% block head %}
+<!-- Flatpickr Date Picker -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="process-wizard">
     <!-- Progress Header -->
@@ -63,13 +71,13 @@ eBay Datenverarbeitung
                                 <div class="input-with-icon">
                                     <i class="bi bi-calendar3"></i>
                                     <input type="text" class="form-control" id="date_from" 
-                                           placeholder="Von: TT.MM.JJJJ" value="21.10.2025">
+                                           placeholder="Von: TT.MM.JJJJ">
                                 </div>
                                 <span class="date-separator">bis</span>
                                 <div class="input-with-icon">
                                     <i class="bi bi-calendar3"></i>
                                     <input type="text" class="form-control" id="date_to" 
-                                           placeholder="Bis: TT.MM.JJJJ" value="28.10.2025">
+                                           placeholder="Bis: TT.MM.JJJJ">
                                 </div>
                             </div>
                         </div>
@@ -287,10 +295,39 @@ eBay Datenverarbeitung
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
+        initDatePickers();
         checkApiData();
         setupFileUpload();
         setupNavigation();
     });
+    
+    // Initialize Flatpickr date pickers
+    function initDatePickers() {
+        const today = new Date();
+        const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
+        
+        const fpConfig = {
+            locale: 'de',
+            dateFormat: 'd.m.Y',
+            allowInput: true,
+            disableMobile: true
+        };
+        
+        const fpFrom = flatpickr('#date_from', {
+            ...fpConfig,
+            defaultDate: threeMonthsAgo,
+            onChange: function(selectedDates) {
+                if (fpTo && selectedDates[0]) {
+                    fpTo.set('minDate', selectedDates[0]);
+                }
+            }
+        });
+        
+        var fpTo = flatpickr('#date_to', {
+            ...fpConfig,
+            defaultDate: today
+        });
+    }
     
     // Check API data status
     async function checkApiData() {
